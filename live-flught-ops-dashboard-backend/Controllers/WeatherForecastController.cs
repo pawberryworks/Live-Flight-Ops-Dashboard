@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace live_flught_ops_dashboard_backend.Controllers
+namespace LiveFlughtOpsDashboardBackend.Controllers
 {
     [ApiController]
     [Route("[controller]")]

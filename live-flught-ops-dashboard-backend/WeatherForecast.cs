@@ -1,4 +1,4 @@
-namespace live_flught_ops_dashboard_backend
+namespace LiveFlughtOpsDashboardBackend
 {
     public class WeatherForecast
     {
