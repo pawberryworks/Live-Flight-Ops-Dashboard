@@ -1,0 +1,6 @@
+{
+    "OpenSkyConfig": {
+        "RefreshIntervalInSeconds": 60,
+        "ApiUrl": "https://opensky-network.org/api"
+    }
+}
