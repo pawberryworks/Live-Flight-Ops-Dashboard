@@ -47,7 +47,8 @@ public sealed class AircraftStateJsonConverter
             Squawk = GetString(state, 14),
 
             Spi = GetBoolean(state, 15) ?? false,
-            PositionSource = GetInt32(state, 16) ?? 0
+            PositionSource = GetInt32(state, 16) ?? 0,
+            Category = GetInt32(state, 17) ?? 0
         };
     }
 

@@ -31,4 +31,5 @@ public sealed class AircraftState
 
     public bool Spi { get; init; }
     public int PositionSource { get; init; }
+    public int Category { get; init; } 
 }
