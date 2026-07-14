@@ -1,0 +1,6 @@
+@live_flught_ops_dashboard_backend_HostAddress = http://localhost:5236
+
+GET {{live_flught_ops_dashboard_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
