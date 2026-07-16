@@ -23,6 +23,7 @@ builder.Services.AddHttpClient("OpenSky", (serviceProvider, client) =>
 // Add services to the container.
 builder.Services.AddScoped<IRefreshIntervalService, RefreshIntervalService>();
 builder.Services.AddScoped<IGeographicBoundsService, GeographicBoundsService>();
+builder.Services.AddScoped<IFlightStatesService, FlightStatesService>();
 
 builder.Services.AddHostedService<FlightStatesBackgroundService>();
 
