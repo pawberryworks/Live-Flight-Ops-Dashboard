@@ -57,38 +57,39 @@ public sealed class AircraftStateJsonConverter
         AircraftState value,
         JsonSerializerOptions options)
     {
-        //writer.WriteStartArray();
+        writer.WriteStartArray();
 
-        //writer.WriteStringValue(value.Icao24);
-        //writer.WriteStringValue(value.CallSign);
-        //writer.WriteStringValue(value.OriginCountry);
+        writer.WriteStringValue(value.Icao24);
+        writer.WriteStringValue(value.CallSign);
+        writer.WriteStringValue(value.OriginCountry);
 
-        //WriteNumberOrNull(writer, value.TimePosition);
-        //WriteNumberOrNull(writer, value.LastContact);
+        WriteNumberOrNull(writer, value.TimePosition);
+        WriteNumberOrNull(writer, value.LastContact);
 
-        //WriteNumberOrNull(writer, value.Longitude);
-        //WriteNumberOrNull(writer, value.Latitude);
-        //WriteNumberOrNull(writer, value.BarometricAltitude);
+        WriteNumberOrNull(writer, value.Longitude);
+        WriteNumberOrNull(writer, value.Latitude);
+        WriteNumberOrNull(writer, value.BarometricAltitude);
 
-        //writer.WriteBooleanValue(value.OnGround);
+        writer.WriteBooleanValue(value.OnGround);
 
-        //WriteNumberOrNull(writer, value.Velocity);
-        //WriteNumberOrNull(writer, value.TrueTrack);
-        //WriteNumberOrNull(writer, value.VerticalRate);
+        WriteNumberOrNull(writer, value.Velocity);
+        WriteNumberOrNull(writer, value.TrueTrack);
+        WriteNumberOrNull(writer, value.VerticalRate);
 
-        //JsonSerializer.Serialize(writer, value.Sensors, options);
+        JsonSerializer.Serialize(writer, value.Sensors, options);
 
-        //WriteNumberOrNull(writer, value.GeometricAltitude);
+        WriteNumberOrNull(writer, value.GeometricAltitude);
 
-        //if (value.Squawk is null)
-        //    writer.WriteNullValue();
-        //else
-        //    writer.WriteStringValue(value.Squawk);
+        if (value.Squawk is null)
+            writer.WriteNullValue();
+        else
+            writer.WriteStringValue(value.Squawk);
 
-        //writer.WriteBooleanValue(value.Spi);
-        //writer.WriteNumberValue(value.PositionSource);
+        writer.WriteBooleanValue(value.Spi);
+        writer.WriteNumberValue(value.PositionSource);
+        writer.WriteNumberValue(value.Category);
 
-        //writer.WriteEndArray();
+        writer.WriteEndArray();
     }
 
     private static JsonElement? GetElement(JsonElement array, int index)
@@ -165,23 +166,23 @@ public sealed class AircraftStateJsonConverter
             .ToArray();
     }
 
-    //private static void WriteNumberOrNull(
-    //    Utf8JsonWriter writer,
-    //    long? value)
-    //{
-    //    if (value.HasValue)
-    //        writer.WriteNumberValue(value.Value);
-    //    else
-    //        writer.WriteNullValue();
-    //}
+    private static void WriteNumberOrNull(
+        Utf8JsonWriter writer,
+        long? value)
+    {
+        if (value.HasValue)
+            writer.WriteNumberValue(value.Value);
+        else
+            writer.WriteNullValue();
+    }
 
-    //private static void WriteNumberOrNull(
-    //    Utf8JsonWriter writer,
-    //    double? value)
-    //{
-    //    if (value.HasValue)
-    //        writer.WriteNumberValue(value.Value);
-    //    else
-    //        writer.WriteNullValue();
-    //}
+    private static void WriteNumberOrNull(
+        Utf8JsonWriter writer,
+        double? value)
+    {
+        if (value.HasValue)
+            writer.WriteNumberValue(value.Value);
+        else
+            writer.WriteNullValue();
+    }
 }
