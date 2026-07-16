@@ -20,7 +20,7 @@ class MainApp extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: SvgPicture.asset(
               'icons/logo-white.svg',
-              height: 122,
+              height: 80,
               colorFilter: ColorFilter.mode(
                 AppColors.light.surface,
                 BlendMode.srcIn,
@@ -28,7 +28,7 @@ class MainApp extends StatelessWidget {
             ),
           ),
           backgroundColor: AppColors.light.brandPrimary,
-          toolbarHeight: 160,
+          toolbarHeight: 112,
         ),
         body: Center(
           child: Text('Hello World!'),
