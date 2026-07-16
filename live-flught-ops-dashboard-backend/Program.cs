@@ -19,10 +19,12 @@ builder.Services.AddHttpClient("OpenSky", (serviceProvider, client) =>
 
     client.BaseAddress = new Uri($"{apiUrl.TrimEnd('/')}/");
 });
-builder.Services.AddHostedService<FlightStatesBackgroundService>();
 
 // Add services to the container.
 builder.Services.AddScoped<IRefreshIntervalService, RefreshIntervalService>();
+builder.Services.AddScoped<IGeographicBoundsService, GeographicBoundsService>();
+
+builder.Services.AddHostedService<FlightStatesBackgroundService>();
 
 var app = builder.Build();
 
