@@ -1,6 +1,6 @@
-@live_flight_ops_dashboard_backend_HostAddress = http://localhost:5236
+@live_flight_ops_dashboard_backend_HostAddress = https://localhost:7002
 
-GET {{live_flight_ops_dashboard_backend_HostAddress}}/weatherforecast/
+GET {{live_flight_ops_dashboard_backend_HostAddress}}/api/flightStates
 Accept: application/json
 
 ###

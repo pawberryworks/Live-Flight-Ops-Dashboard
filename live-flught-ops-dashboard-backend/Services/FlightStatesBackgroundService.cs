@@ -57,6 +57,9 @@ public sealed class FlightStatesBackgroundService : BackgroundService
                 return;
             }
 
+            _logger.LogInformation("Fetched flight states from the external API with count {Count}.",
+                flightStates.States.Count());
+
             _memoryCache.Set(FlightStatesCacheKey, flightStates);
 
             _logger.LogInformation(
