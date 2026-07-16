@@ -1,4 +1,4 @@
-using LiveFlughtOpsDashboardBackend.Services;
+using LiveFlightOpsDashboardBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

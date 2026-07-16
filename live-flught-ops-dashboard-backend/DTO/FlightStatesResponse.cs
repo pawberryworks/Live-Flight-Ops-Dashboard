@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace LiveFlughtOpsDashboardBackend.DTO;
+namespace LiveFlightOpsDashboardBackend.DTO;
 
 public sealed class FlightStatesResponse
 {

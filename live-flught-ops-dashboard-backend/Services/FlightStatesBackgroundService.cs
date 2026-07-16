@@ -1,10 +1,9 @@
-using System.Net.Http.Json;
 using System.Text.Json;
-
-using LiveFlughtOpsDashboardBackend.DTO;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace LiveFlughtOpsDashboardBackend.Services;
+using LiveFlightOpsDashboardBackend.DTO;
+
+namespace LiveFlightOpsDashboardBackend.Services;
 
 public sealed class FlightStatesBackgroundService : BackgroundService
 {
@@ -46,7 +45,7 @@ public sealed class FlightStatesBackgroundService : BackgroundService
         try
         {
             var client = _httpClientFactory.CreateClient(HttpClientName);
-            using var response = await client.GetAsync(FlightStatesPath, stoppingToken);
+            using var response = await client.GetAsync(FlightStatesPathWithParameters(), stoppingToken);
             response.EnsureSuccessStatusCode();
 
             var flightStates = await response.Content.ReadFromJsonAsync<FlightStatesResponse>(
@@ -91,5 +90,26 @@ public sealed class FlightStatesBackgroundService : BackgroundService
         }
 
         return TimeSpan.FromSeconds(refreshIntervalInSeconds);
+    }
+
+    private String FlightStatesPathWithParameters() {
+        return $"{FlightStatesPath}?{GetParametersOfLatitudesAndLongitutes()}";
+    }
+
+    private String GetParametersOfLatitudesAndLongitutes()
+    {
+        var minimalLatitude =
+            _configuration.GetValue<float>("OpenSkyConfig:LatitudeMin");
+
+        var minimalLongitude =
+            _configuration.GetValue<float>("OpenSkyConfig:LongitudeMin");
+
+        var maximalLatitude =
+            _configuration.GetValue<float>("OpenSkyConfig:LatitudeMax");
+
+        var maximalLongitude =
+            _configuration.GetValue<float>("OpenSkyConfig:LongitudeMax");
+
+        return $"lamin={minimalLatitude}&lomin={minimalLongitude}&lamax={maximalLatitude}&lomax={maximalLongitude}";
     }
 }

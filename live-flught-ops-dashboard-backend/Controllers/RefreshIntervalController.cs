@@ -1,7 +1,7 @@
-﻿using LiveFlughtOpsDashboardBackend.Services;
+﻿using LiveFlightOpsDashboardBackend.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LiveFlughtOpsDashboardBackend.Controllers;
+namespace LiveFlightOpsDashboardBackend.Controllers;
 
 [ApiController]
 [Route("api/refreshInterval")]

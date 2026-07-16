@@ -1,6 +1,10 @@
 {
     "OpenSkyConfig": {
-        "RefreshIntervalInSeconds": 60,
-        "ApiUrl": "https://opensky-network.org/api"
+        "RefreshIntervalInSeconds": 10,
+        "ApiUrl": "https://opensky-network.org/api",
+        "LatitudeMin": 48.00,
+        "LatitudeMax": 48.40,
+        "LongitudeMin": 16.00,
+        "LongitudeMax": 16.80
     }
 }

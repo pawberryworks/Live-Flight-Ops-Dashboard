@@ -1,4 +1,4 @@
-﻿namespace LiveFlughtOpsDashboardBackend.Services;
+﻿namespace LiveFlightOpsDashboardBackend.Services;
 
 public interface IRefreshIntervalService
 {

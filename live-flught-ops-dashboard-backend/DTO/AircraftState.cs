@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-using LiveFlughtOpsDashboardBackend.Converters;
+using LiveFlightOpsDashboardBackend.Converters;
 
-namespace LiveFlughtOpsDashboardBackend.DTO;
+namespace LiveFlightOpsDashboardBackend.DTO;
 
 [JsonConverter(typeof(AircraftStateJsonConverter))]
 public sealed class AircraftState
