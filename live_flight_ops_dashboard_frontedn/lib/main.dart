@@ -1,4 +1,8 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import 'theme/app_colors.dart';
 
 void main() {
   runApp(const MainApp());
@@ -14,8 +18,17 @@ class MainApp extends StatelessWidget {
         appBar: AppBar(
           title: Align(
             alignment: Alignment.centerLeft,
-            child: Text('Live Flight Ops Dashboard'),
+            child: SvgPicture.asset(
+              'icons/logo-white.svg',
+              height: 122,
+              colorFilter: ColorFilter.mode(
+                AppColors.light.surface,
+                BlendMode.srcIn,
+              ),
+            ),
           ),
+          backgroundColor: AppColors.light.brandPrimary,
+          toolbarHeight: 160,
         ),
         body: Center(
           child: Text('Hello World!'),
