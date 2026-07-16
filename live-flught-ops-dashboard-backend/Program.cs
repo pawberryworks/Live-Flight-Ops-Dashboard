@@ -23,6 +23,7 @@ builder.Services.AddHostedService<FlightStatesBackgroundService>();
 
 // Add services to the container.
 builder.Services.AddScoped<IRefreshIntervalService, RefreshIntervalService>();
+builder.Services.AddScoped<IGeographicBoundsService, GeographicBoundsService>();
 
 var app = builder.Build();
 
