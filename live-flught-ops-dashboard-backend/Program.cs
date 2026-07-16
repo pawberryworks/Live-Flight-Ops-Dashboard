@@ -10,6 +10,16 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+builder.Services.AddHttpClient("OpenSky", (serviceProvider, client) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var apiUrl = configuration["OpenSkyConfig:ApiUrl"]
+        ?? throw new InvalidOperationException("OpenSkyConfig:ApiUrl is not configured.");
+
+    client.BaseAddress = new Uri($"{apiUrl.TrimEnd('/')}/");
+});
+builder.Services.AddHostedService<FlightStatesBackgroundService>();
+
 // Add services to the container.
 builder.Services.AddScoped<IRefreshIntervalService, RefreshIntervalService>();
 
