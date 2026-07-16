@@ -2,26 +2,32 @@ using System.Net.Http.Json;
 using System.Text.Json;
 
 using LiveFlughtOpsDashboardBackend.DTO;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LiveFlughtOpsDashboardBackend.Services;
 
 public sealed class FlightStatesBackgroundService : BackgroundService
 {
+    public const string FlightStatesCacheKey = "FlightStates";
+
     private const string HttpClientName = "OpenSky";
     private const string FlightStatesPath = "states/all";
 
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<FlightStatesBackgroundService> _logger;
+    private readonly IMemoryCache _memoryCache;
 
     public FlightStatesBackgroundService(
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
-        ILogger<FlightStatesBackgroundService> logger)
+        ILogger<FlightStatesBackgroundService> logger,
+        IMemoryCache memoryCache)
     {
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _memoryCache = memoryCache;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,6 +57,8 @@ public sealed class FlightStatesBackgroundService : BackgroundService
                 _logger.LogWarning("The flight states API returned an empty response.");
                 return;
             }
+
+            _memoryCache.Set(FlightStatesCacheKey, flightStates);
 
             _logger.LogInformation(
                 "Received {FlightStateCount} flight states at API timestamp {ApiTimestamp}.",
