@@ -16,13 +16,13 @@ public sealed class GeographicBoundsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<GeographicBounds>> GetGeographicBounds()
+    public ActionResult<GeographicBounds> GetGeographicBounds()
     {
         return Ok(_geographicBoundsService.GetGeographicBounds());
     }
 
     [HttpPut]
-    public async Task<IActionResult> PutGeographicBounds(GeographicBounds geographicBounds)
+    public IActionResult PutGeographicBounds(GeographicBounds geographicBounds)
     {
         _geographicBoundsService.SetGeographicBounds(geographicBounds);
         return NoContent();
