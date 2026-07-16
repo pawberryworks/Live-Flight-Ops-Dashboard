@@ -15,14 +15,15 @@ public class RefreshIntervalController : Controller
     }
 
     [HttpGet()]
-    public async Task<int> GetRefresIntervalhValue()
+    public ActionResult<int> GetRefresIntervalhValue()
     {
         return _refreshService.GetRefreshIntervalInSeconds();
     }
 
     [HttpPut("{refreshIntervalInSeconds:int}")]
-    public async Task PutRefreshValue(int refreshIntervalInSeconds)
+    public IActionResult PutRefreshValue(int refreshIntervalInSeconds)
     {
         _refreshService.SetRefreshIntervalInSeconds(refreshIntervalInSeconds);
+        return NoContent();
     }
 }
