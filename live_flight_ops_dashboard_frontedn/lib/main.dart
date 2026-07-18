@@ -157,7 +157,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   final bounds = snapshot.requireData;
                   return Semantics(
                     label: 'Map of the configured geographic bounds',
-                    child: GeographicBoundsMap(bounds: bounds),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: GeographicBoundsMap(bounds: bounds),
+                    ),
                   );
                 },
               ),
