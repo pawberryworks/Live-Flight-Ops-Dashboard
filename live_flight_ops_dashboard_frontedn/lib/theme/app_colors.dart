@@ -5,10 +5,10 @@ abstract final class AppColors {
     brightness: Brightness.light,
 
     // Brand / primary actions
-    primary: Color(0xFFE30613),
+    primary: Color.fromARGB(255, 216, 42, 59),
     onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color(0xFFFDEBED),
-    onPrimaryContainer: Color(0xFF5C0007),
+    primaryContainer: Color.fromARGB(255, 221, 102, 116),
+    onPrimaryContainer: Color.fromARGB(255, 216, 42, 59),
 
     // Informational actions and secondary controls
     secondary: Color(0xFF1769AA),
@@ -62,7 +62,7 @@ abstract final class AppColors {
     brightness: Brightness.dark,
 
     // Slightly brighter red for dark backgrounds
-    primary: Color(0xFFFF3944),
+    primary: Color.fromARGB(255, 216, 42, 59),
     onPrimary: Color(0xFF3D0005),
     primaryContainer: Color(0xFF5D1017),
     onPrimaryContainer: Color(0xFFFFDADB),

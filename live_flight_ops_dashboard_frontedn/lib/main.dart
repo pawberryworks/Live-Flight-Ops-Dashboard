@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_side_menu/flutter_side_menu.dart';
 
 import 'theme/app_colors.dart';
 
@@ -49,46 +50,140 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16.0),
-            child: SvgPicture.asset(
-              'assets/icons/logo-white.svg',
-              height: 80,
-              colorFilter: ColorFilter.mode(
-                Theme.of(context).colorScheme.onPrimary,
-                BlendMode.srcIn,
-              ),
+      body: Row(
+          children: [
+            SideMenu(
+              mode: SideMenuMode.open,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              builder: (data) {
+                return SideMenuData(
+                  defaultTileData: SideMenuItemTileDefaults(
+                    highlightSelectedColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                    titleStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary, 
+                    ),
+                    selectedTitleStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary, 
+                    ),
+                    hoverColor: Theme.of(context).colorScheme.surfaceTint,
+
+                  ),
+                  animItems: SideMenuItemsAnimationData(),
+                  header: Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
+                    child: SvgPicture.asset(
+                      'assets/icons/logo-white.svg',
+                      height: 80,
+                      colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onPrimary,
+                        BlendMode.srcIn,
+                        ),
+                      ),
+                  ),
+                  items: [
+                    SideMenuItemDataTile(isSelected: true, title: 'Map', onTap: () {}, icon: Icon(Icons.map)),
+                    SideMenuItemDataTile(isSelected: false, title: 'List', onTap: () {}, icon: Icon(Icons.list)),
+                  ],
+                  footer: IconButton(
+                    icon: Icon(
+                      Theme.of(context).brightness == Brightness.light
+                          ? Icons.dark_mode
+                          : Icons.light_mode,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 32,
+                    ),
+                    onPressed: onToggleTheme,
+                  )
+                );
+              },
             ),
-          )
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.light
-                  ? Icons.dark_mode
-                  : Icons.light_mode,
-              color: Theme.of(context).colorScheme.onPrimary,
-              size: 32,
-            ),
-            onPressed: onToggleTheme,
-          ),
-        ],
-        actionsPadding: const EdgeInsets.only(right: 32.0),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        toolbarHeight: 112,
-      ),
-      body: Center(
-        child: Text(
-          'Hello World!',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 24,
-          ),
-        ),
-      ),
+          ]
+      )
     );
+      // appBar: AppBar(
+      //   title: Align(
+      //     alignment: Alignment.centerLeft,
+      //     child: Padding(
+      //       padding: const EdgeInsets.only(left: 16.0),
+      //       child: SvgPicture.asset(
+      //         'assets/icons/logo-white.svg',
+      //         height: 80,
+      //         colorFilter: ColorFilter.mode(
+      //           Theme.of(context).colorScheme.onPrimary,
+      //           BlendMode.srcIn,
+      //         ),
+      //       ),
+      //     )
+      //   ),
+      //   actions: [
+      //     IconButton(
+      //       icon: Icon(
+      //         Theme.of(context).brightness == Brightness.light
+      //             ? Icons.dark_mode
+      //             : Icons.light_mode,
+      //         color: Theme.of(context).colorScheme.onPrimary,
+      //         size: 32,
+      //       ),
+      //       onPressed: onToggleTheme,
+      //     ),
+      //   ],
+      //   actionsPadding: const EdgeInsets.only(right: 32.0),
+      //   backgroundColor: Theme.of(context).colorScheme.primary,
+      //   toolbarHeight: 112,
+      // ),
+      // body: Center(
+      //   child: Text(
+      //     'Hello World!',
+      //     style: TextStyle(
+      //       color: Theme.of(context).colorScheme.onSurface,
+      //       fontSize: 24,
+      //     ),
+      //   ),
+      // ),
   }
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: Align(
+  //         alignment: Alignment.centerLeft,
+  //         child: Padding(
+  //           padding: const EdgeInsets.only(left: 16.0),
+  //           child: SvgPicture.asset(
+  //             'assets/icons/logo-white.svg',
+  //             height: 80,
+  //             colorFilter: ColorFilter.mode(
+  //               Theme.of(context).colorScheme.onPrimary,
+  //               BlendMode.srcIn,
+  //             ),
+  //           ),
+  //         )
+  //       ),
+  //       actions: [
+  //         IconButton(
+  //           icon: Icon(
+  //             Theme.of(context).brightness == Brightness.light
+  //                 ? Icons.dark_mode
+  //                 : Icons.light_mode,
+  //             color: Theme.of(context).colorScheme.onPrimary,
+  //             size: 32,
+  //           ),
+  //           onPressed: onToggleTheme,
+  //         ),
+  //       ],
+  //       actionsPadding: const EdgeInsets.only(right: 32.0),
+  //       backgroundColor: Theme.of(context).colorScheme.primary,
+  //       toolbarHeight: 112,
+  //     ),
+  //     body: Center(
+  //       child: Text(
+  //         'Hello World!',
+  //         style: TextStyle(
+  //           color: Theme.of(context).colorScheme.onSurface,
+  //           fontSize: 24,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 }
