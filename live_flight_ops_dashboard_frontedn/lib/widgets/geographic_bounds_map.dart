@@ -2,9 +2,33 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
+import 'outlined_icon.dart';
 
 const double _tileSize = 256;
+
+class AircraftMapScope extends InheritedWidget {
+  const AircraftMapScope({
+    required this.aircraft,
+    required super.child,
+    super.key,
+  });
+
+  final List<AircraftState> aircraft;
+
+  static List<AircraftState> of(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<AircraftMapScope>()
+            ?.aircraft ??
+        const [];
+  }
+
+  @override
+  bool updateShouldNotify(AircraftMapScope oldWidget) {
+    return aircraft != oldWidget.aircraft;
+  }
+}
 
 class GeographicBoundsMap extends StatelessWidget {
   const GeographicBoundsMap({
@@ -16,12 +40,11 @@ class GeographicBoundsMap extends StatelessWidget {
   final GeographicBounds bounds;
 
   // Keep this field on the const widget for Flutter hot-reload compatibility.
-  // The count is displayed by FlightStatesList, but removing a field from a
-  // loaded const class requires a full hot restart.
   final int aircraftCount;
 
   @override
   Widget build(BuildContext context) {
+    final aircraft = AircraftMapScope.of(context);
     return LayoutBuilder(
       builder: (context, available) {
         final northWest = _project(
@@ -95,6 +118,40 @@ class GeographicBoundsMap extends StatelessWidget {
                                         ),
                                   ),
                                 ),
+                              Positioned.fill(
+                                child: ColoredBox(
+                                  key: const ValueKey('map-dark-overlay'),
+                                  color: Colors.black.withValues(alpha: 0.32),
+                                ),
+                              ),
+                              for (final state in aircraft)
+                                if (layout.positionFor(state, bounds)
+                                    case final position?)
+                                  Positioned(
+                                    key: ValueKey('aircraft-${state.icao24}'),
+                                    left: position.dx - 14,
+                                    top: position.dy - 14,
+                                    width: 28,
+                                    height: 28,
+                                    child: Tooltip(
+                                      message: _aircraftLabel(state),
+                                      excludeFromSemantics: true,
+                                      child: Semantics(
+                                        label: _aircraftLabel(state),
+                                        child: Transform.rotate(
+                                          angle: (state.trueTrack ?? 0) *
+                                              math.pi /
+                                              180,
+                                          child: const OutlinedIcon(
+                                            Icons.airplanemode_active,
+                                            size: 21,
+                                            color: Colors.yellow,
+                                            outlineColor: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                             ],
                           ),
                         ),
@@ -161,15 +218,7 @@ class _MapLayout {
 
   factory _MapLayout.forBounds(GeographicBounds bounds, Size viewport) {
     const padding = 0.0;
-    var zoom = 18;
-    for (; zoom > 0; zoom--) {
-      final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
-      final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
-      if (southEast.dx - northWest.dx <= viewport.width - padding * 2 &&
-          southEast.dy - northWest.dy <= viewport.height - padding * 2) {
-        break;
-      }
-    }
+    final zoom = _zoomForBounds(bounds, viewport, padding);
 
     final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
     final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
@@ -215,6 +264,60 @@ class _MapLayout {
   final Rect boundsRectangle;
 
   double get tileDisplaySize => boundsRectangle.height;
+
+  Offset? positionFor(AircraftState aircraft, GeographicBounds bounds) {
+    final latitude = aircraft.latitude;
+    final longitude = aircraft.longitude;
+    if (latitude == null ||
+        longitude == null ||
+        latitude < bounds.latitudeMin ||
+        latitude > bounds.latitudeMax ||
+        longitude < bounds.longitudeMin ||
+        longitude > bounds.longitudeMax) {
+      return null;
+    }
+
+    final northWestAtWorldZoom = _project(
+      bounds.latitudeMax,
+      bounds.longitudeMin,
+      0,
+    );
+    final southEastAtWorldZoom = _project(
+      bounds.latitudeMin,
+      bounds.longitudeMax,
+      0,
+    );
+    final aspectRatio =
+        (southEastAtWorldZoom.dx - northWestAtWorldZoom.dx) /
+        (southEastAtWorldZoom.dy - northWestAtWorldZoom.dy);
+    final viewport = Size(
+      boundsRectangle.width,
+      boundsRectangle.width / aspectRatio,
+    );
+    final zoom = _zoomForBounds(bounds, viewport, 0);
+    final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
+    final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
+    final displayScale = viewport.width / (southEast.dx - northWest.dx);
+    final projected = _project(latitude, longitude, zoom);
+    return (projected - northWest) * displayScale;
+  }
+}
+
+int _zoomForBounds(
+  GeographicBounds bounds,
+  Size viewport,
+  double padding,
+) {
+  var zoom = 18;
+  for (; zoom > 0; zoom--) {
+    final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
+    final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
+    if (southEast.dx - northWest.dx <= viewport.width - padding * 2 &&
+        southEast.dy - northWest.dy <= viewport.height - padding * 2) {
+      break;
+    }
+  }
+  return zoom;
 }
 
 class _MapTile {
@@ -243,4 +346,14 @@ Offset _project(double latitude, double longitude, int zoom) {
         2 *
         scale,
   );
+}
+
+String _aircraftLabel(AircraftState aircraft) {
+  final identifier = aircraft.callSign.isNotEmpty
+      ? aircraft.callSign
+      : aircraft.icao24.toUpperCase();
+  final altitude = aircraft.barometricAltitude;
+  return altitude == null
+      ? identifier
+      : '$identifier • ${altitude.toStringAsFixed(0)} m';
 }
