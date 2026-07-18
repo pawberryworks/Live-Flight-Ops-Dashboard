@@ -23,6 +23,8 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     'ICAO24',
     'Call sign',
     'Country',
+    'Time position',
+    'Last contact',
     'Latitude',
     'Longitude',
     'Altitude',
@@ -30,7 +32,12 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     'Velocity',
     'Track',
     'Vertical rate',
+    'Sensors',
+    'Geometric altitude',
     'Squawk',
+    'SPI',
+    'Position source',
+    'Category',
   ];
 
   final Map<int, String> _filters = {};
@@ -39,6 +46,8 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     state.icao24.toUpperCase(),
     state.callSign,
     state.originCountry,
+    _integer(state.timePosition),
+    _integer(state.lastContact),
     _number(state.latitude, suffix: '°'),
     _number(state.longitude, suffix: '°'),
     _number(state.barometricAltitude, suffix: ' m'),
@@ -46,7 +55,12 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     _number(state.velocity, suffix: ' m/s'),
     _number(state.trueTrack, suffix: '°'),
     _number(state.verticalRate, suffix: ' m/s'),
+    state.sensors?.join(', ') ?? '—',
+    _number(state.geometricAltitude, suffix: ' m'),
     state.squawk ?? '—',
+    state.spi ? 'Yes' : 'No',
+    state.positionSource.toString(),
+    state.category.toString(),
   ];
 
   List<AircraftState> get _filteredStates => widget.states.where((state) {
@@ -227,3 +241,5 @@ String _number(double? value, {required String suffix}) {
   if (value == null) return '—';
   return '${value.toStringAsFixed(1)}$suffix';
 }
+
+String _integer(int? value) => value?.toString() ?? '—';
