@@ -11,6 +11,18 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMemoryCache();
 
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("LocalFrontend", policy => policy
+            .SetIsOriginAllowed(origin => Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                && uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+    });
+}
+
 builder.Services.AddHttpClient("OpenSky", (serviceProvider, client) =>
 {
     var configuration = serviceProvider.GetRequiredService<IConfiguration>();
@@ -33,6 +45,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseCors("LocalFrontend");
 }
 
 app.UseHttpsRedirection();
