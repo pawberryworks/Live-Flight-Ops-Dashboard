@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_side_menu/flutter_side_menu.dart';
@@ -6,6 +8,7 @@ import 'models/flight_states.dart';
 import 'models/geographic_bounds.dart';
 import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
+import 'services/refresh_interval_service.dart';
 import 'theme/app_colors.dart';
 import 'widgets/flight_states_list.dart';
 import 'widgets/geographic_bounds_map.dart';
@@ -61,7 +64,20 @@ class _DashboardPageState extends State<DashboardPage> {
   final GeographicBoundsService _geographicBoundsService =
       GeographicBoundsService();
   final FlightStatesService _flightStatesService = FlightStatesService();
+  RefreshIntervalService? _refreshIntervalServiceInstance;
   late Future<_DashboardData> _dashboardData;
+  Timer? _flightStatesRefreshTimer;
+  GeographicBounds? _bounds;
+  // Keep newly added state nullable and lazily initialized so hot reload can
+  // migrate dashboard State objects that were created before these fields
+  // existed.
+  bool? _flightStatesRequestInProgress;
+  ValueNotifier<FlightStates?>? _flightStatesNotifier;
+
+  ValueNotifier<FlightStates?> get _flightStates =>
+      _flightStatesNotifier ??= ValueNotifier(null);
+  RefreshIntervalService get _refreshIntervalService =>
+      _refreshIntervalServiceInstance ??= RefreshIntervalService();
 
   @override
   void initState() {
@@ -70,18 +86,51 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _loadDashboardData() {
-    _dashboardData = _fetchDashboardData();
+    _flightStatesRefreshTimer?.cancel();
+    _dashboardData = _initializeDashboardData();
   }
 
-  Future<_DashboardData> _fetchDashboardData() async {
+  Future<_DashboardData> _initializeDashboardData() async {
+    final refreshInterval = await _refreshIntervalService.getRefreshInterval();
     final results = await Future.wait([
       _geographicBoundsService.getGeographicBounds(),
       _flightStatesService.getFlightStates(),
     ]);
+    _bounds = results[0] as GeographicBounds;
+    _flightStates.value = results[1] as FlightStates;
+    if (mounted) {
+      _flightStatesRefreshTimer = Timer.periodic(
+        refreshInterval,
+        (_) => unawaited(_refreshFlightStates()),
+      );
+    }
     return _DashboardData(
-      bounds: results[0] as GeographicBounds,
+      bounds: _bounds!,
       flightStates: results[1] as FlightStates,
     );
+  }
+
+  Future<void> _refreshFlightStates() async {
+    final bounds = _bounds;
+    if (!mounted ||
+        bounds == null ||
+        _flightStatesRequestInProgress == true) {
+      return;
+    }
+
+    _flightStatesRequestInProgress = true;
+    try {
+      final flightStates = await _flightStatesService.getFlightStates();
+      if (!mounted) {
+        return;
+      }
+
+      _flightStates.value = flightStates;
+    } on FlightStatesException {
+      // Keep the last successful response visible and retry on the next tick.
+    } finally {
+      _flightStatesRequestInProgress = false;
+    }
   }
 
   void _retry() {
@@ -90,8 +139,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   void dispose() {
+    _flightStatesRefreshTimer?.cancel();
     _geographicBoundsService.close();
     _flightStatesService.close();
+    _refreshIntervalServiceInstance?.close();
+    _flightStatesNotifier?.dispose();
     super.dispose();
   }
 
@@ -180,19 +232,30 @@ class _DashboardPageState extends State<DashboardPage> {
                           flex: 2,
                           child: Semantics(
                             label: 'Map of the configured geographic bounds',
-                            child: AircraftMapScope(
-                              aircraft: data.flightStates.states,
+                            child: ValueListenableBuilder<FlightStates?>(
+                              valueListenable: _flightStates,
                               child: GeographicBoundsMap(
                                 bounds: data.bounds,
                                 aircraftCount: data.flightStates.states.length,
                               ),
+                              builder: (context, flightStates, map) {
+                                return AircraftMapScope(
+                                  aircraft: flightStates?.states ?? const [],
+                                  child: map!,
+                                );
+                              },
                             ),
                           ),
                         ),
                         const SizedBox(width: 24),
                         Expanded(
-                          child: FlightStatesList(
-                            states: data.flightStates.states,
+                          child: ValueListenableBuilder<FlightStates?>(
+                            valueListenable: _flightStates,
+                            builder: (context, flightStates, _) {
+                              return FlightStatesList(
+                                states: flightStates?.states ?? const [],
+                              );
+                            },
                           ),
                         ),
                       ],

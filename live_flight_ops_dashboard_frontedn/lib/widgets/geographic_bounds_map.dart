@@ -44,7 +44,6 @@ class GeographicBoundsMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aircraft = AircraftMapScope.of(context);
     return LayoutBuilder(
       builder: (context, available) {
         final northWest = _project(
@@ -124,34 +123,12 @@ class GeographicBoundsMap extends StatelessWidget {
                                   color: Colors.black.withValues(alpha: 0.32),
                                 ),
                               ),
-                              for (final state in aircraft)
-                                if (layout.positionFor(state, bounds)
-                                    case final position?)
-                                  Positioned(
-                                    key: ValueKey('aircraft-${state.icao24}'),
-                                    left: position.dx - 14,
-                                    top: position.dy - 14,
-                                    width: 28,
-                                    height: 28,
-                                    child: Tooltip(
-                                      message: _aircraftLabel(state),
-                                      excludeFromSemantics: true,
-                                      child: Semantics(
-                                        label: _aircraftLabel(state),
-                                        child: Transform.rotate(
-                                          angle: (state.trueTrack ?? 0) *
-                                              math.pi /
-                                              180,
-                                          child: const OutlinedIcon(
-                                            Icons.airplanemode_active,
-                                            size: 21,
-                                            color: Colors.yellow,
-                                            outlineColor: Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                              Positioned.fill(
+                                child: _AircraftMarkers(
+                                  layout: layout,
+                                  bounds: bounds,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -209,6 +186,47 @@ class GeographicBoundsMap extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _AircraftMarkers extends StatelessWidget {
+  const _AircraftMarkers({required this.layout, required this.bounds});
+
+  final _MapLayout layout;
+  final GeographicBounds bounds;
+
+  @override
+  Widget build(BuildContext context) {
+    final aircraft = AircraftMapScope.of(context);
+    return Stack(
+      children: [
+        for (final state in aircraft)
+          if (layout.positionFor(state, bounds) case final position?)
+            Positioned(
+              key: ValueKey('aircraft-${state.icao24}'),
+              left: position.dx - 14,
+              top: position.dy - 14,
+              width: 28,
+              height: 28,
+              child: Tooltip(
+                message: _aircraftLabel(state),
+                excludeFromSemantics: true,
+                child: Semantics(
+                  label: _aircraftLabel(state),
+                  child: Transform.rotate(
+                    angle: (state.trueTrack ?? 0) * math.pi / 180,
+                    child: const OutlinedIcon(
+                      Icons.airplanemode_active,
+                      size: 21,
+                      color: Colors.yellow,
+                      outlineColor: Colors.black,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+      ],
     );
   }
 }
