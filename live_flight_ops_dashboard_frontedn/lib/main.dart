@@ -5,6 +5,7 @@ import 'package:flutter_side_menu/flutter_side_menu.dart';
 import 'models/geographic_bounds.dart';
 import 'services/geographic_bounds_service.dart';
 import 'theme/app_colors.dart';
+import 'widgets/geographic_bounds_map.dart';
 
 void main() {
   runApp(const MainApp());
@@ -154,16 +155,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   }
 
                   final bounds = snapshot.requireData;
-                  return Center(
-                    child: Semantics(
-                      label: 'Loaded geographic bounds',
-                      child: Text(
-                        'Latitude: ${bounds.latitudeMin} to ${bounds.latitudeMax}\n'
-                        'Longitude: ${bounds.longitudeMin} to ${bounds.longitudeMax}',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
+                  return Semantics(
+                    label: 'Map of the configured geographic bounds',
+                    child: GeographicBoundsMap(bounds: bounds),
                   );
                 },
               ),
