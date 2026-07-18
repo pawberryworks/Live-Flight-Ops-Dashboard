@@ -73,8 +73,8 @@ class GeographicBoundsMap extends StatelessWidget {
                                 Positioned(
                                   left: tile.left,
                                   top: tile.top,
-                                  width: _tileSize,
-                                  height: _tileSize,
+                                  width: tile.size,
+                                  height: tile.size,
                                   child: Image.network(
                                     tile.url,
                                     fit: BoxFit.cover,
@@ -86,18 +86,6 @@ class GeographicBoundsMap extends StatelessWidget {
                                         ),
                                   ),
                                 ),
-                              Positioned.fill(
-                                child: IgnorePointer(
-                                  child: CustomPaint(
-                                    painter: _BoundsPainter(
-                                      rectangle: layout.boundsRectangle,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -160,7 +148,7 @@ class GeographicBoundsMap extends StatelessWidget {
 }
 
 class _MapLayout {
-  const _MapLayout({required this.tiles, required this.boundsRectangle});
+  const _MapLayout({required this.tiles});
 
   factory _MapLayout.forBounds(GeographicBounds bounds, Size viewport) {
     const padding = 0.0;
@@ -176,14 +164,11 @@ class _MapLayout {
 
     final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
     final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
-    final offset = Offset(
-      (viewport.width - (northWest.dx + southEast.dx)) / 2,
-      (viewport.height - (northWest.dy + southEast.dy)) / 2,
-    );
-    final firstX = ((-offset.dx) / _tileSize).floor() - 1;
-    final lastX = ((viewport.width - offset.dx) / _tileSize).ceil() + 1;
-    final firstY = ((-offset.dy) / _tileSize).floor() - 1;
-    final lastY = ((viewport.height - offset.dy) / _tileSize).ceil() + 1;
+    final displayScale = viewport.width / (southEast.dx - northWest.dx);
+    final firstX = (northWest.dx / _tileSize).floor();
+    final lastX = (southEast.dx / _tileSize).ceil();
+    final firstY = (northWest.dy / _tileSize).floor();
+    final lastY = (southEast.dy / _tileSize).ceil();
     final tileCount = 1 << zoom;
     final tiles = <_MapTile>[];
 
@@ -196,29 +181,32 @@ class _MapLayout {
         final wrappedX = ((x % tileCount) + tileCount) % tileCount;
         tiles.add(
           _MapTile(
-            left: x * _tileSize + offset.dx,
-            top: y * _tileSize + offset.dy,
+            left: (x * _tileSize - northWest.dx) * displayScale,
+            top: (y * _tileSize - northWest.dy) * displayScale,
+            size: _tileSize * displayScale + 0.5,
             url: 'https://tile.openstreetmap.org/$zoom/$wrappedX/$y.png',
           ),
         );
       }
     }
 
-    return _MapLayout(
-      tiles: tiles,
-      boundsRectangle: Rect.fromPoints(northWest + offset, southEast + offset),
-    );
+    return _MapLayout(tiles: tiles);
   }
 
   final List<_MapTile> tiles;
-  final Rect boundsRectangle;
 }
 
 class _MapTile {
-  const _MapTile({required this.left, required this.top, required this.url});
+  const _MapTile({
+    required this.left,
+    required this.top,
+    required this.size,
+    required this.url,
+  });
 
   final double left;
   final double top;
+  final double size;
   final String url;
 }
 
@@ -236,32 +224,4 @@ Offset _project(double latitude, double longitude, int zoom) {
         2 *
         scale,
   );
-}
-
-class _BoundsPainter extends CustomPainter {
-  const _BoundsPainter({required this.rectangle, required this.color});
-
-  final Rect rectangle;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      rectangle,
-      Paint()
-        ..color = color.withValues(alpha: 0.16)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawRect(
-      rectangle,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_BoundsPainter oldDelegate) =>
-      rectangle != oldDelegate.rectangle || color != oldDelegate.color;
 }
