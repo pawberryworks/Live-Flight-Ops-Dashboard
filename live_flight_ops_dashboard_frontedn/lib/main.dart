@@ -1,14 +1,12 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-import 'package:simple_theme_switcher/simple_theme_switcher.dart';
 
 import 'theme/app_colors.dart';
 
 void main() {
   runApp(const MainApp());
 }
+
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
@@ -17,6 +15,16 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode = _themeMode == ThemeMode.light
+          ? ThemeMode.dark
+          : ThemeMode.light;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -27,37 +35,45 @@ class _MainAppState extends State<MainApp> {
       darkTheme: ThemeData(
         colorScheme: AppColors.dark,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Align(
-            alignment: Alignment.centerLeft,
-            child: SvgPicture.asset(
-              'assets/icons/logo-white.svg',
-              height: 80,
-              colorFilter: ColorFilter.mode(
-                Theme.of(context).colorScheme.onPrimary,
-                BlendMode.srcIn,
-              ),
+      themeMode: _themeMode,
+      home: DashboardPage(onToggleTheme: _toggleTheme),
+    );
+  }
+}
+
+class DashboardPage extends StatelessWidget {
+  const DashboardPage({required this.onToggleTheme, super.key});
+
+  final VoidCallback onToggleTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: SvgPicture.asset(
+            'assets/icons/logo-white.svg',
+            height: 80,
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).colorScheme.onPrimary,
+              BlendMode.srcIn,
             ),
           ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          toolbarHeight: 112,
         ),
-        body: Center(
-          child: ElevatedButton(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        toolbarHeight: 112,
+      ),
+      body: Center(
+        child: ElevatedButton(
           onPressed: () {
-            // Use ThemeManager to toggle theme
-            final themeManager = ThemeManager();
-            debugPrint('Current Theme Mode: ${themeManager.currentThemeMode} Current primary color: ${Theme.of(context).colorScheme.primary}');
-            themeManager.toggleTheme(
-              themeManager.currentThemeMode == AppThemeMode.light
-                  ? AppThemeMode.dark
-                  : AppThemeMode.light,
-              seedColor: Colors.blue, // Optional seed color
+            debugPrint(
+              'Current primary color: '
+              '${Theme.of(context).colorScheme.primary}',
             );
+            onToggleTheme();
           },
           child: const Text('Toggle Theme'),
-        ),
         ),
       ),
     );

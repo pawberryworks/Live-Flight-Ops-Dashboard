@@ -11,7 +11,6 @@ dependencies:
     sdk: flutter
   flutter_side_menu: ^0.5.41
   flutter_svg: ^2.3.0
-  simple_theme_switcher: ^0.0.7
 
 
 dev_dependencies:
