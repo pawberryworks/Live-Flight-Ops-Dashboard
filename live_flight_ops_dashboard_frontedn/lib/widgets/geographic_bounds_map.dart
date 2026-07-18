@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
+import 'outlined_icon.dart';
 
 const double _tileSize = 256;
 
@@ -141,20 +142,11 @@ class GeographicBoundsMap extends StatelessWidget {
                                           angle: (state.trueTrack ?? 0) *
                                               math.pi /
                                               180,
-                                          child: const Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.airplanemode_active,
-                                                size: 27,
-                                                color: Colors.black,
-                                              ),
-                                              Icon(
-                                                Icons.airplanemode_active,
-                                                size: 21,
-                                                color: Colors.red,
-                                              ),
-                                            ],
+                                          child: const OutlinedIcon(
+                                            Icons.airplanemode_active,
+                                            size: 21,
+                                            color: Colors.red,
+                                            outlineColor: Colors.black,
                                           ),
                                         ),
                                       ),

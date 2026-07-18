@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:live_flight_ops_dashboard_frontedn/models/aircraft_state.dart';
 import 'package:live_flight_ops_dashboard_frontedn/models/geographic_bounds.dart';
 import 'package:live_flight_ops_dashboard_frontedn/widgets/geographic_bounds_map.dart';
+import 'package:live_flight_ops_dashboard_frontedn/widgets/outlined_icon.dart';
 
 void main() {
   testWidgets('draws only aircraft with positions inside the map bounds', (
@@ -36,13 +37,16 @@ void main() {
     expect(find.byKey(const ValueKey('aircraft-inside')), findsOneWidget);
     expect(find.byKey(const ValueKey('aircraft-outside')), findsNothing);
     expect(find.byKey(const ValueKey('aircraft-unknown')), findsNothing);
-    expect(find.byIcon(Icons.airplanemode_active), findsNWidgets(2));
-    final planeIcons = tester.widgetList<Icon>(
+    expect(find.byType(OutlinedIcon), findsOneWidget);
+    final planeIcon = tester.widget<Icon>(
       find.byIcon(Icons.airplanemode_active),
     );
+    expect(planeIcon.color, Colors.red);
+    expect(planeIcon.size, 21);
+    expect(planeIcon.shadows, hasLength(10));
     expect(
-      planeIcons.map((icon) => icon.color),
-      containsAll([Colors.red, Colors.black]),
+      planeIcon.shadows!.map((shadow) => shadow.color),
+      everyElement(Colors.black),
     );
     final overlay = tester.widget<ColoredBox>(
       find.byKey(const ValueKey('map-dark-overlay')),
