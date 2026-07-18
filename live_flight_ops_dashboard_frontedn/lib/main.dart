@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_side_menu/flutter_side_menu.dart';
@@ -6,6 +8,7 @@ import 'models/flight_states.dart';
 import 'models/geographic_bounds.dart';
 import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
+import 'services/refresh_interval_service.dart';
 import 'theme/app_colors.dart';
 import 'widgets/flight_states_list.dart';
 import 'widgets/geographic_bounds_map.dart';
@@ -61,7 +64,11 @@ class _DashboardPageState extends State<DashboardPage> {
   final GeographicBoundsService _geographicBoundsService =
       GeographicBoundsService();
   final FlightStatesService _flightStatesService = FlightStatesService();
+  final RefreshIntervalService _refreshIntervalService =
+      RefreshIntervalService();
   late Future<_DashboardData> _dashboardData;
+  Timer? _flightStatesRefreshTimer;
+  GeographicBounds? _bounds;
 
   @override
   void initState() {
@@ -70,18 +77,41 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _loadDashboardData() {
-    _dashboardData = _fetchDashboardData();
+    _flightStatesRefreshTimer?.cancel();
+    _dashboardData = _initializeDashboardData();
   }
 
-  Future<_DashboardData> _fetchDashboardData() async {
+  Future<_DashboardData> _initializeDashboardData() async {
+    final refreshInterval = await _refreshIntervalService.getRefreshInterval();
     final results = await Future.wait([
       _geographicBoundsService.getGeographicBounds(),
       _flightStatesService.getFlightStates(),
     ]);
+    _bounds = results[0] as GeographicBounds;
+    if (mounted) {
+      _flightStatesRefreshTimer = Timer.periodic(
+        refreshInterval,
+        (_) => _refreshFlightStates(),
+      );
+    }
     return _DashboardData(
-      bounds: results[0] as GeographicBounds,
+      bounds: _bounds!,
       flightStates: results[1] as FlightStates,
     );
+  }
+
+  void _refreshFlightStates() {
+    final bounds = _bounds;
+    if (!mounted || bounds == null) {
+      return;
+    }
+
+    setState(() {
+      _dashboardData = _flightStatesService.getFlightStates().then(
+        (flightStates) =>
+            _DashboardData(bounds: bounds, flightStates: flightStates),
+      );
+    });
   }
 
   void _retry() {
@@ -90,8 +120,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   void dispose() {
+    _flightStatesRefreshTimer?.cancel();
     _geographicBoundsService.close();
     _flightStatesService.close();
+    _refreshIntervalService.close();
     super.dispose();
   }
 
