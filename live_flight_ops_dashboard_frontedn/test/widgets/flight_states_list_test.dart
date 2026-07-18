@@ -36,6 +36,25 @@ void main() {
 
     expect(find.text('No flights are currently tracked.'), findsOneWidget);
   });
+
+  testWidgets('marks the flight selected on the map', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesList(
+            states: [_aircraft(icao24: 'abc123', originCountry: 'Germany')],
+            selectedAircraftIcao24: 'abc123',
+          ),
+        ),
+      ),
+    );
+
+    final tile = tester.widget<ListTile>(
+      find.byKey(const ValueKey('flight-abc123')),
+    );
+    expect(tile.selected, isTrue);
+    expect(tile.selectedTileColor, isNotNull);
+  });
 }
 
 AircraftState _aircraft({

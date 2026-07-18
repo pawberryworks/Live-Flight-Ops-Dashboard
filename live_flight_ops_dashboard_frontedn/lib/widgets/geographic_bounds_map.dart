@@ -11,22 +11,25 @@ const double _tileSize = 256;
 class AircraftMapScope extends InheritedWidget {
   const AircraftMapScope({
     required this.aircraft,
+    required this.selectedAircraftIcao24,
+    required this.onAircraftSelected,
     required super.child,
     super.key,
   });
 
   final List<AircraftState> aircraft;
+  final String? selectedAircraftIcao24;
+  final ValueChanged<String> onAircraftSelected;
 
-  static List<AircraftState> of(BuildContext context) {
-    return context
-            .dependOnInheritedWidgetOfExactType<AircraftMapScope>()
-            ?.aircraft ??
-        const [];
+  static AircraftMapScope? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<AircraftMapScope>();
   }
 
   @override
   bool updateShouldNotify(AircraftMapScope oldWidget) {
-    return aircraft != oldWidget.aircraft;
+    return aircraft != oldWidget.aircraft ||
+        selectedAircraftIcao24 != oldWidget.selectedAircraftIcao24 ||
+        onAircraftSelected != oldWidget.onAircraftSelected;
   }
 }
 
@@ -198,7 +201,8 @@ class _AircraftMarkers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aircraft = AircraftMapScope.of(context);
+    final scope = AircraftMapScope.maybeOf(context);
+    final aircraft = scope?.aircraft ?? const <AircraftState>[];
     return Stack(
       children: [
         for (final state in aircraft)
@@ -209,18 +213,28 @@ class _AircraftMarkers extends StatelessWidget {
               top: position.dy - 14,
               width: 28,
               height: 28,
-              child: Tooltip(
-                message: _aircraftLabel(state),
-                excludeFromSemantics: true,
-                child: Semantics(
-                  label: _aircraftLabel(state),
-                  child: Transform.rotate(
-                    angle: (state.trueTrack ?? 0) * math.pi / 180,
-                    child: const OutlinedIcon(
-                      Icons.airplanemode_active,
-                      size: 21,
-                      color: Colors.yellow,
-                      outlineColor: Colors.black,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: scope == null
+                    ? null
+                    : () => scope.onAircraftSelected(state.icao24),
+                child: Tooltip(
+                  message: _aircraftLabel(state),
+                  excludeFromSemantics: true,
+                  child: Semantics(
+                    button: true,
+                    selected: scope?.selectedAircraftIcao24 == state.icao24,
+                    label: _aircraftLabel(state),
+                    child: Transform.rotate(
+                      angle: (state.trueTrack ?? 0) * math.pi / 180,
+                      child: OutlinedIcon(
+                        Icons.airplanemode_active,
+                        size: 21,
+                        color: scope?.selectedAircraftIcao24 == state.icao24
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Colors.yellow,
+                        outlineColor: Colors.black,
+                      ),
                     ),
                   ),
                 ),

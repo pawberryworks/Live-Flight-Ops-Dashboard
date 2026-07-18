@@ -73,6 +73,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // existed.
   bool? _flightStatesRequestInProgress;
   ValueNotifier<FlightStates?>? _flightStatesNotifier;
+  String? _selectedAircraftIcao24;
 
   ValueNotifier<FlightStates?> get _flightStates =>
       _flightStatesNotifier ??= ValueNotifier(null);
@@ -135,6 +136,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _retry() {
     setState(_loadDashboardData);
+  }
+
+  void _selectAircraft(String icao24) {
+    setState(() => _selectedAircraftIcao24 = icao24);
   }
 
   @override
@@ -241,6 +246,9 @@ class _DashboardPageState extends State<DashboardPage> {
                               builder: (context, flightStates, map) {
                                 return AircraftMapScope(
                                   aircraft: flightStates?.states ?? const [],
+                                  selectedAircraftIcao24:
+                                      _selectedAircraftIcao24,
+                                  onAircraftSelected: _selectAircraft,
                                   child: map!,
                                 );
                               },
@@ -254,6 +262,8 @@ class _DashboardPageState extends State<DashboardPage> {
                             builder: (context, flightStates, _) {
                               return FlightStatesList(
                                 states: flightStates?.states ?? const [],
+                                selectedAircraftIcao24:
+                                    _selectedAircraftIcao24,
                               );
                             },
                           ),

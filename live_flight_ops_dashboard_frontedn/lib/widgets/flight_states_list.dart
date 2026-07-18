@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import '../models/aircraft_state.dart';
 
 class FlightStatesList extends StatelessWidget {
-  const FlightStatesList({required this.states, super.key});
+  const FlightStatesList({
+    required this.states,
+    this.selectedAircraftIcao24,
+    super.key,
+  });
 
   final List<AircraftState> states;
+  final String? selectedAircraftIcao24;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +43,8 @@ class FlightStatesList extends StatelessWidget {
                         const Divider(height: 1),
                     itemBuilder: (context, index) => _FlightListItem(
                       state: states[index],
+                      isSelected:
+                          states[index].icao24 == selectedAircraftIcao24,
                     ),
                   ),
           ),
@@ -48,9 +55,10 @@ class FlightStatesList extends StatelessWidget {
 }
 
 class _FlightListItem extends StatelessWidget {
-  const _FlightListItem({required this.state});
+  const _FlightListItem({required this.state, required this.isSelected});
 
   final AircraftState state;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +70,11 @@ class _FlightListItem extends StatelessWidget {
 
     return Semantics(
       label: 'Flight $callSign from ${state.originCountry}',
+      selected: isSelected,
       child: ListTile(
+        key: ValueKey('flight-${state.icao24}'),
+        selected: isSelected,
+        selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
         leading: Icon(
           state.onGround ? Icons.flight_land : Icons.flight,
           color: Theme.of(context).colorScheme.primary,
