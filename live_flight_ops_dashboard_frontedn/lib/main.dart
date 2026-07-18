@@ -69,6 +69,7 @@ class _DashboardPageState extends State<DashboardPage> {
   late Future<_DashboardData> _dashboardData;
   Timer? _flightStatesRefreshTimer;
   GeographicBounds? _bounds;
+  bool _flightStatesRequestInProgress = false;
 
   @override
   void initState() {
@@ -91,7 +92,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mounted) {
       _flightStatesRefreshTimer = Timer.periodic(
         refreshInterval,
-        (_) => _refreshFlightStates(),
+        (_) => unawaited(_refreshFlightStates()),
       );
     }
     return _DashboardData(
@@ -100,18 +101,29 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  void _refreshFlightStates() {
+  Future<void> _refreshFlightStates() async {
     final bounds = _bounds;
-    if (!mounted || bounds == null) {
+    if (!mounted || bounds == null || _flightStatesRequestInProgress) {
       return;
     }
 
-    setState(() {
-      _dashboardData = _flightStatesService.getFlightStates().then(
-        (flightStates) =>
-            _DashboardData(bounds: bounds, flightStates: flightStates),
-      );
-    });
+    _flightStatesRequestInProgress = true;
+    try {
+      final flightStates = await _flightStatesService.getFlightStates();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _dashboardData = Future.value(
+          _DashboardData(bounds: bounds, flightStates: flightStates),
+        );
+      });
+    } on FlightStatesException {
+      // Keep the last successful response visible and retry on the next tick.
+    } finally {
+      _flightStatesRequestInProgress = false;
+    }
   }
 
   void _retry() {
