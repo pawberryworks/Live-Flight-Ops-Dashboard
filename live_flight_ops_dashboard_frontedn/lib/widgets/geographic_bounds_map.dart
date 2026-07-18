@@ -73,8 +73,8 @@ class GeographicBoundsMap extends StatelessWidget {
                                 Positioned(
                                   left: tile.left,
                                   top: tile.top,
-                                  width: tile.size,
-                                  height: tile.size,
+                                  width: layout.tileDisplaySize,
+                                  height: layout.tileDisplaySize,
                                   child: Image.network(
                                     tile.url,
                                     fit: BoxFit.cover,
@@ -148,7 +148,7 @@ class GeographicBoundsMap extends StatelessWidget {
 }
 
 class _MapLayout {
-  const _MapLayout({required this.tiles});
+  const _MapLayout({required this.tiles, required this.boundsRectangle});
 
   factory _MapLayout.forBounds(GeographicBounds bounds, Size viewport) {
     const padding = 0.0;
@@ -183,30 +183,40 @@ class _MapLayout {
           _MapTile(
             left: (x * _tileSize - northWest.dx) * displayScale,
             top: (y * _tileSize - northWest.dy) * displayScale,
-            size: _tileSize * displayScale + 0.5,
             url: 'https://tile.openstreetmap.org/$zoom/$wrappedX/$y.png',
           ),
         );
       }
     }
 
-    return _MapLayout(tiles: tiles);
+    return _MapLayout(
+      tiles: tiles,
+      // Keep the layout metrics in the existing field so changing the map
+      // crop does not alter this const class's field shape during hot reload.
+      boundsRectangle: Rect.fromLTWH(
+        0,
+        0,
+        viewport.width,
+        _tileSize * displayScale + 0.5,
+      ),
+    );
   }
 
   final List<_MapTile> tiles;
+  final Rect boundsRectangle;
+
+  double get tileDisplaySize => boundsRectangle.height;
 }
 
 class _MapTile {
   const _MapTile({
     required this.left,
     required this.top,
-    required this.size,
     required this.url,
   });
 
   final double left;
   final double top;
-  final double size;
   final String url;
 }
 
