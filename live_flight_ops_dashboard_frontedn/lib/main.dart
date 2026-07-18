@@ -26,6 +26,8 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   ThemeMode _themeMode = ThemeMode.light;
+  late final ThemeData _lightTheme = ThemeData(colorScheme: AppColors.light);
+  late final ThemeData _darkTheme = ThemeData(colorScheme: AppColors.dark);
 
   void _toggleTheme() {
     setState(() {
@@ -39,12 +41,8 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Live Flight Ops Dashboard',
-      theme: ThemeData(
-        colorScheme: AppColors.light,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: AppColors.dark,
-      ),
+      theme: _lightTheme,
+      darkTheme: _darkTheme,
       themeMode: _themeMode,
       home: DashboardPage(onToggleTheme: _toggleTheme),
     );

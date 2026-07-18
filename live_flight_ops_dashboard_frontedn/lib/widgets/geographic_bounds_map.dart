@@ -36,7 +36,7 @@ class AircraftMapScope extends InheritedWidget {
   }
 }
 
-class GeographicBoundsMap extends StatelessWidget {
+class GeographicBoundsMap extends StatefulWidget {
   const GeographicBoundsMap({
     required this.bounds,
     required this.aircraftCount,
@@ -49,17 +49,38 @@ class GeographicBoundsMap extends StatelessWidget {
   final int aircraftCount;
 
   @override
+  State<GeographicBoundsMap> createState() => _GeographicBoundsMapState();
+}
+
+class _GeographicBoundsMapState extends State<GeographicBoundsMap> {
+  Size? _layoutSize;
+  GeographicBounds? _layoutBounds;
+  _MapLayout? _layout;
+
+  _MapLayout _layoutFor(Size size) {
+    final bounds = widget.bounds;
+    if (_layout == null ||
+        _layoutSize != size ||
+        !_sameBounds(_layoutBounds, bounds)) {
+      _layoutSize = size;
+      _layoutBounds = bounds;
+      _layout = _MapLayout.forBounds(bounds, size);
+    }
+    return _layout!;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, available) {
         final northWest = _project(
-          bounds.latitudeMax,
-          bounds.longitudeMin,
+          widget.bounds.latitudeMax,
+          widget.bounds.longitudeMin,
           0,
         );
         final southEast = _project(
-          bounds.latitudeMin,
-          bounds.longitudeMax,
+          widget.bounds.latitudeMin,
+          widget.bounds.longitudeMax,
           0,
         );
         final aspectRatio = (southEast.dx - northWest.dx) /
@@ -89,8 +110,7 @@ class GeographicBoundsMap extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final layout = _MapLayout.forBounds(
-                  bounds,
+                final layout = _layoutFor(
                   Size(constraints.maxWidth, constraints.maxHeight),
                 );
 
@@ -132,7 +152,7 @@ class GeographicBoundsMap extends StatelessWidget {
                               Positioned.fill(
                                 child: _AircraftMarkers(
                                   layout: layout,
-                                  bounds: bounds,
+                                  bounds: widget.bounds,
                                 ),
                               ),
                             ],
@@ -159,8 +179,8 @@ class GeographicBoundsMap extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${bounds.latitudeMin.toStringAsFixed(2)}°–${bounds.latitudeMax.toStringAsFixed(2)}° N  •  '
-                                '${bounds.longitudeMin.toStringAsFixed(2)}°–${bounds.longitudeMax.toStringAsFixed(2)}° E',
+                                '${widget.bounds.latitudeMin.toStringAsFixed(2)}°–${widget.bounds.latitudeMax.toStringAsFixed(2)}° N  •  '
+                                '${widget.bounds.longitudeMin.toStringAsFixed(2)}°–${widget.bounds.longitudeMax.toStringAsFixed(2)}° E',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
@@ -360,6 +380,13 @@ class _MapTile {
   final double left;
   final double top;
   final String url;
+}
+
+bool _sameBounds(GeographicBounds? first, GeographicBounds second) {
+  return first?.latitudeMin == second.latitudeMin &&
+      first?.latitudeMax == second.latitudeMax &&
+      first?.longitudeMin == second.longitudeMin &&
+      first?.longitudeMax == second.longitudeMax;
 }
 
 Offset _project(double latitude, double longitude, int zoom) {
