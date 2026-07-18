@@ -17,6 +17,7 @@ void main() {
           child: AircraftMapScope(
             selectedAircraftIcao24: null,
             onAircraftSelected: (_) {},
+            onAircraftDeselected: () {},
             aircraft: [
               _aircraft(icao24: 'inside', latitude: 52, longitude: 13),
               _aircraft(icao24: 'outside', latitude: 40, longitude: 13),
@@ -70,6 +71,7 @@ void main() {
             ],
             selectedAircraftIcao24: null,
             onAircraftSelected: (icao24) => selectedAircraft = icao24,
+            onAircraftDeselected: () {},
             child: const GeographicBoundsMap(
               bounds: GeographicBounds(
                 latitudeMin: 47,
@@ -87,6 +89,43 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('aircraft-abc123')));
 
     expect(selectedAircraft, 'abc123');
+  });
+
+  testWidgets('clears the selection when an aircraft is double tapped', (
+    tester,
+  ) async {
+    var selectionCleared = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 800,
+          height: 600,
+          child: AircraftMapScope(
+            aircraft: [
+              _aircraft(icao24: 'abc123', latitude: 52, longitude: 13),
+            ],
+            selectedAircraftIcao24: 'abc123',
+            onAircraftSelected: (_) {},
+            onAircraftDeselected: () => selectionCleared = true,
+            child: const GeographicBoundsMap(
+              bounds: GeographicBounds(
+                latitudeMin: 47,
+                latitudeMax: 55,
+                longitudeMin: 5,
+                longitudeMax: 15,
+              ),
+              aircraftCount: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('aircraft-abc123')));
+    await tester.tap(find.byKey(const ValueKey('aircraft-abc123')));
+    await tester.pumpAndSettle();
+
+    expect(selectionCleared, isTrue);
   });
 }
 

@@ -7,12 +7,14 @@ class FlightStatesList extends StatelessWidget {
     required this.states,
     this.selectedAircraftIcao24,
     this.onAircraftSelected,
+    this.onAircraftDeselected,
     super.key,
   });
 
   final List<AircraftState> states;
   final String? selectedAircraftIcao24;
   final ValueChanged<String>? onAircraftSelected;
+  final VoidCallback? onAircraftDeselected;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +53,7 @@ class FlightStatesList extends StatelessWidget {
                       onTap: selectAircraft == null
                           ? null
                           : () => selectAircraft(states[index].icao24),
+                      onDoubleTap: onAircraftDeselected,
                     ),
                   ),
           ),
@@ -65,11 +68,13 @@ class _FlightListItem extends StatelessWidget {
     required this.state,
     required this.isSelected,
     required this.onTap,
+    required this.onDoubleTap,
   });
 
   final AircraftState state;
   final bool isSelected;
   final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -82,31 +87,34 @@ class _FlightListItem extends StatelessWidget {
     return Semantics(
       label: 'Flight $callSign from ${state.originCountry}',
       selected: isSelected,
-      child: ListTile(
-        key: ValueKey('flight-${state.icao24}'),
-        selected: isSelected,
-        selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+      child: InkWell(
         onTap: onTap,
-        leading: Icon(
-          state.onGround ? Icons.flight_land : Icons.flight,
-          color: Theme.of(context).colorScheme.primary,
+        onDoubleTap: onDoubleTap,
+        child: ListTile(
+          key: ValueKey('flight-${state.icao24}'),
+          selected: isSelected,
+          selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+          leading: Icon(
+            state.onGround ? Icons.flight_land : Icons.flight,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: Text(callSign),
+          subtitle: Text(
+            [
+              state.originCountry,
+              if (altitude != null) '${altitude.toStringAsFixed(0)} m',
+              if (velocity != null) '${velocity.toStringAsFixed(0)} m/s',
+            ].join('  •  '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: state.onGround
+              ? const Tooltip(
+                  message: 'On ground',
+                  child: Icon(Icons.circle, size: 10),
+                )
+              : null,
         ),
-        title: Text(callSign),
-        subtitle: Text(
-          [
-            state.originCountry,
-            if (altitude != null) '${altitude.toStringAsFixed(0)} m',
-            if (velocity != null) '${velocity.toStringAsFixed(0)} m/s',
-          ].join('  •  '),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: state.onGround
-            ? const Tooltip(
-                message: 'On ground',
-                child: Icon(Icons.circle, size: 10),
-              )
-            : null,
       ),
     );
   }

@@ -142,6 +142,10 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() => _selectedAircraftIcao24 = icao24);
   }
 
+  void _clearAircraftSelection() {
+    setState(() => _selectedAircraftIcao24 = null);
+  }
+
   @override
   void dispose() {
     _flightStatesRefreshTimer?.cancel();
@@ -249,6 +253,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                   selectedAircraftIcao24:
                                       _selectedAircraftIcao24,
                                   onAircraftSelected: _selectAircraft,
+                                  onAircraftDeselected:
+                                      _clearAircraftSelection,
                                   child: map!,
                                 );
                               },
@@ -265,6 +271,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                 selectedAircraftIcao24:
                                     _selectedAircraftIcao24,
                                 onAircraftSelected: _selectAircraft,
+                                onAircraftDeselected:
+                                    _clearAircraftSelection,
                               );
                             },
                           ),

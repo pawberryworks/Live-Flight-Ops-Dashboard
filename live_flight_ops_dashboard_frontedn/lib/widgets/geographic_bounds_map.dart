@@ -13,6 +13,7 @@ class AircraftMapScope extends InheritedWidget {
     required this.aircraft,
     required this.selectedAircraftIcao24,
     required this.onAircraftSelected,
+    required this.onAircraftDeselected,
     required super.child,
     super.key,
   });
@@ -20,6 +21,7 @@ class AircraftMapScope extends InheritedWidget {
   final List<AircraftState> aircraft;
   final String? selectedAircraftIcao24;
   final ValueChanged<String> onAircraftSelected;
+  final VoidCallback onAircraftDeselected;
 
   static AircraftMapScope? maybeOf(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<AircraftMapScope>();
@@ -29,7 +31,8 @@ class AircraftMapScope extends InheritedWidget {
   bool updateShouldNotify(AircraftMapScope oldWidget) {
     return aircraft != oldWidget.aircraft ||
         selectedAircraftIcao24 != oldWidget.selectedAircraftIcao24 ||
-        onAircraftSelected != oldWidget.onAircraftSelected;
+        onAircraftSelected != oldWidget.onAircraftSelected ||
+        onAircraftDeselected != oldWidget.onAircraftDeselected;
   }
 }
 
@@ -218,6 +221,7 @@ class _AircraftMarkers extends StatelessWidget {
                 onTap: scope == null
                     ? null
                     : () => scope.onAircraftSelected(state.icao24),
+                onDoubleTap: scope?.onAircraftDeselected,
                 child: Tooltip(
                   message: _aircraftLabel(state),
                   excludeFromSemantics: true,

@@ -73,6 +73,30 @@ void main() {
 
     expect(selectedAircraft, 'abc123');
   });
+
+  testWidgets('clears the selection when a flight is double tapped', (
+    tester,
+  ) async {
+    var selectionCleared = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesList(
+            states: [_aircraft(icao24: 'abc123', originCountry: 'Germany')],
+            selectedAircraftIcao24: 'abc123',
+            onAircraftSelected: (_) {},
+            onAircraftDeselected: () => selectionCleared = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('flight-abc123')));
+    await tester.tap(find.byKey(const ValueKey('flight-abc123')));
+    await tester.pumpAndSettle();
+
+    expect(selectionCleared, isTrue);
+  });
 }
 
 AircraftState _aircraft({
