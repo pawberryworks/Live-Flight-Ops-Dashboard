@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
-import 'outlined_icon.dart';
 
 const double _tileSize = 256;
 
@@ -226,47 +225,146 @@ class _AircraftMarkers extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AircraftMapScope.maybeOf(context);
     final aircraft = scope?.aircraft ?? const <AircraftState>[];
-    return Stack(
-      children: [
-        for (final state in aircraft)
-          if (layout.positionFor(state, bounds) case final position?)
-            Positioned(
-              key: ValueKey('aircraft-${state.icao24}'),
-              left: position.dx - 14,
-              top: position.dy - 14,
-              width: 28,
-              height: 28,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: scope == null
-                    ? null
-                    : () => scope.onAircraftSelected(state.icao24),
-                onDoubleTap: scope?.onAircraftDeselected,
-                child: Tooltip(
-                  message: _aircraftLabel(state),
-                  excludeFromSemantics: true,
-                  child: Semantics(
-                    button: true,
-                    selected: scope?.selectedAircraftIcao24 == state.icao24,
-                    label: _aircraftLabel(state),
-                    child: Transform.rotate(
-                      angle: (state.trueTrack ?? 0) * math.pi / 180,
-                      child: OutlinedIcon(
-                        Icons.airplanemode_active,
-                        size: 21,
-                        color: scope?.selectedAircraftIcao24 == state.icao24
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : Colors.yellow,
-                        outlineColor: Colors.black,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-      ],
+    AircraftState? aircraftAt(Offset point) {
+      AircraftState? closest;
+      var closestDistance = 18.0;
+      for (final state in aircraft) {
+        final position = layout.positionFor(state, bounds);
+        if (position == null) continue;
+        final distance = (position - point).distance;
+        if (distance < closestDistance) {
+          closest = state;
+          closestDistance = distance;
+        }
+      }
+      return closest;
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapUp: scope == null
+          ? null
+          : (details) {
+              final state = aircraftAt(details.localPosition);
+              if (state != null) scope.onAircraftSelected(state.icao24);
+            },
+      onDoubleTapDown: scope == null
+          ? null
+          : (details) {
+              if (aircraftAt(details.localPosition) != null) {
+                scope.onAircraftDeselected();
+              }
+            },
+      child: RepaintBoundary(
+        child: CustomPaint(
+          key: const ValueKey('aircraft-marker-layer'),
+          painter: _AircraftPainter(
+            aircraft: aircraft,
+            layout: layout,
+            bounds: bounds,
+            selectedAircraftIcao24: scope?.selectedAircraftIcao24,
+            selectedColor: Theme.of(context).colorScheme.primaryContainer,
+            onAircraftSelected: scope?.onAircraftSelected,
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ),
     );
   }
+}
+
+class _AircraftPainter extends CustomPainter {
+  _AircraftPainter({
+    required this.aircraft,
+    required this.layout,
+    required this.bounds,
+    required this.selectedAircraftIcao24,
+    required this.selectedColor,
+    required this.onAircraftSelected,
+  });
+
+  final List<AircraftState> aircraft;
+  final _MapLayout layout;
+  final GeographicBounds bounds;
+  final String? selectedAircraftIcao24;
+  final Color selectedColor;
+  final ValueChanged<String>? onAircraftSelected;
+
+  static final Path _plane = Path()
+    ..moveTo(0, -11)
+    ..lineTo(3, -3)
+    ..lineTo(10, 1)
+    ..lineTo(10, 4)
+    ..lineTo(3, 2)
+    ..lineTo(2, 8)
+    ..lineTo(5, 10)
+    ..lineTo(5, 12)
+    ..lineTo(0, 10)
+    ..lineTo(-5, 12)
+    ..lineTo(-5, 10)
+    ..lineTo(-2, 8)
+    ..lineTo(-3, 2)
+    ..lineTo(-10, 4)
+    ..lineTo(-10, 1)
+    ..lineTo(-3, -3)
+    ..close();
+
+  Iterable<({AircraftState state, Offset position})> get _visible sync* {
+    for (final state in aircraft) {
+      final position = layout.positionFor(state, bounds);
+      if (position != null) yield (state: state, position: position);
+    }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outline = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()..style = PaintingStyle.fill;
+
+    for (final marker in _visible) {
+      canvas.save();
+      canvas.translate(marker.position.dx, marker.position.dy);
+      canvas.rotate((marker.state.trueTrack ?? 0) * math.pi / 180);
+      fill.color = marker.state.icao24 == selectedAircraftIcao24
+          ? selectedColor
+          : Colors.yellow;
+      canvas.drawPath(_plane, outline);
+      canvas.drawPath(_plane, fill);
+      canvas.restore();
+    }
+  }
+
+  @override
+  SemanticsBuilderCallback get semanticsBuilder => (size) => [
+    for (final marker in _visible)
+      CustomPainterSemantics(
+        rect: Rect.fromCircle(center: marker.position, radius: 14),
+        properties: SemanticsProperties(
+          label: _aircraftLabel(marker.state),
+          button: true,
+          selected: marker.state.icao24 == selectedAircraftIcao24,
+          onTap: onAircraftSelected == null
+              ? null
+              : () => onAircraftSelected!(marker.state.icao24),
+        ),
+      ),
+  ];
+
+  @override
+  bool shouldRepaint(_AircraftPainter oldDelegate) =>
+      aircraft != oldDelegate.aircraft ||
+      layout != oldDelegate.layout ||
+      selectedAircraftIcao24 != oldDelegate.selectedAircraftIcao24 ||
+      selectedColor != oldDelegate.selectedColor;
+
+  @override
+  bool shouldRebuildSemantics(_AircraftPainter oldDelegate) =>
+      shouldRepaint(oldDelegate) ||
+      onAircraftSelected != oldDelegate.onAircraftSelected;
 }
 
 class _MapLayout {

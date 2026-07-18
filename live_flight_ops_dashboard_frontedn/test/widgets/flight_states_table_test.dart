@@ -63,8 +63,8 @@ void main() {
 
     expect(find.byType(Dialog), findsOneWidget);
     expect(find.text('DLH123 on map'), findsOneWidget);
-    expect(find.byKey(const ValueKey('aircraft-abc123')), findsOneWidget);
-    expect(find.byKey(const ValueKey('aircraft-def456')), findsNothing);
+    expect(find.bySemanticsLabel('DLH123 • 10000 m'), findsOneWidget);
+    expect(find.bySemanticsLabel('AFR456 • 10000 m'), findsNothing);
   });
 
   testWidgets('only builds the current page of a large flight list', (
