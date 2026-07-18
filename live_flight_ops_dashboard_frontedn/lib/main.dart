@@ -1,16 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:simple_theme_switcher/simple_theme_switcher.dart';
-
 import 'theme/app_colors.dart';
 
 void main() {
   runApp(const MainApp());
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
+
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode = _themeMode == ThemeMode.light
+          ? ThemeMode.dark
+          : ThemeMode.light;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +35,16 @@ class MainApp extends StatelessWidget {
       darkTheme: ThemeData(
         colorScheme: AppColors.dark,
       ),
-      home: const DashboardPage(),
+      themeMode: _themeMode,
+      home: DashboardPage(onToggleTheme: _toggleTheme),
     );
   }
 }
 
 class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
+  const DashboardPage({required this.onToggleTheme, super.key});
+
+  final VoidCallback onToggleTheme;
 
   @override
   Widget build(BuildContext context) {
@@ -51,18 +67,11 @@ class DashboardPage extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-            // Use ThemeManager to toggle theme
-            final themeManager = ThemeManager();
             debugPrint(
-              'Current Theme Mode: ${themeManager.currentThemeMode} '
               'Current primary color: '
               '${Theme.of(context).colorScheme.primary}',
             );
-            themeManager.toggleTheme(
-              themeManager.currentThemeMode == AppThemeMode.light
-                  ? AppThemeMode.dark
-                  : AppThemeMode.light,
-            );
+            onToggleTheme();
           },
           child: const Text('Toggle Theme'),
         ),
