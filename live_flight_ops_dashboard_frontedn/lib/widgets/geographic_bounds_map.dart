@@ -7,9 +7,18 @@ import '../models/geographic_bounds.dart';
 const double _tileSize = 256;
 
 class GeographicBoundsMap extends StatelessWidget {
-  const GeographicBoundsMap({required this.bounds, super.key});
+  const GeographicBoundsMap({
+    required this.bounds,
+    required this.aircraftCount,
+    super.key,
+  });
 
   final GeographicBounds bounds;
+
+  // Keep this field on the const widget for Flutter hot-reload compatibility.
+  // The count is displayed by FlightStatesList, but removing a field from a
+  // loaded const class requires a full hot restart.
+  final int aircraftCount;
 
   @override
   Widget build(BuildContext context) {
