@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_side_menu/flutter_side_menu.dart';
 
+import 'models/flight_states.dart';
 import 'models/geographic_bounds.dart';
+import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
 import 'theme/app_colors.dart';
 import 'widgets/geographic_bounds_map.dart';
@@ -57,25 +59,38 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final GeographicBoundsService _geographicBoundsService =
       GeographicBoundsService();
-  late Future<GeographicBounds> _geographicBounds;
+  final FlightStatesService _flightStatesService = FlightStatesService();
+  late Future<_DashboardData> _dashboardData;
 
   @override
   void initState() {
     super.initState();
-    _loadGeographicBounds();
+    _loadDashboardData();
   }
 
-  void _loadGeographicBounds() {
-    _geographicBounds = _geographicBoundsService.getGeographicBounds();
+  void _loadDashboardData() {
+    _dashboardData = _fetchDashboardData();
+  }
+
+  Future<_DashboardData> _fetchDashboardData() async {
+    final results = await Future.wait([
+      _geographicBoundsService.getGeographicBounds(),
+      _flightStatesService.getFlightStates(),
+    ]);
+    return _DashboardData(
+      bounds: results[0] as GeographicBounds,
+      flightStates: results[1] as FlightStates,
+    );
   }
 
   void _retry() {
-    setState(_loadGeographicBounds);
+    setState(_loadDashboardData);
   }
 
   @override
   void dispose() {
     _geographicBoundsService.close();
+    _flightStatesService.close();
     super.dispose();
   }
 
@@ -130,8 +145,8 @@ class _DashboardPageState extends State<DashboardPage> {
               },
             ),
             Expanded(
-              child: FutureBuilder<GeographicBounds>(
-                future: _geographicBounds,
+              child: FutureBuilder<_DashboardData>(
+                future: _dashboardData,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
                     return const Center(child: CircularProgressIndicator());
@@ -142,7 +157,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('Unable to load geographic bounds.'),
+                          const Text('Unable to load dashboard data.'),
                           const SizedBox(height: 12),
                           FilledButton.icon(
                             onPressed: _retry,
@@ -154,12 +169,15 @@ class _DashboardPageState extends State<DashboardPage> {
                     );
                   }
 
-                  final bounds = snapshot.requireData;
+                  final data = snapshot.requireData;
                   return Semantics(
                     label: 'Map of the configured geographic bounds',
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: GeographicBoundsMap(bounds: bounds),
+                      child: GeographicBoundsMap(
+                        bounds: data.bounds,
+                        aircraftCount: data.flightStates.states.length,
+                      ),
                     ),
                   );
                 },
@@ -254,4 +272,11 @@ class _DashboardPageState extends State<DashboardPage> {
   //     ),
   //   );
   // }
+}
+
+class _DashboardData {
+  const _DashboardData({required this.bounds, required this.flightStates});
+
+  final GeographicBounds bounds;
+  final FlightStates flightStates;
 }

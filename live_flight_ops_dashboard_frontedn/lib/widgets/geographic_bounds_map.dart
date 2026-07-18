@@ -7,9 +7,14 @@ import '../models/geographic_bounds.dart';
 const double _tileSize = 256;
 
 class GeographicBoundsMap extends StatelessWidget {
-  const GeographicBoundsMap({required this.bounds, super.key});
+  const GeographicBoundsMap({
+    required this.bounds,
+    required this.aircraftCount,
+    super.key,
+  });
 
   final GeographicBounds bounds;
+  final int aircraftCount;
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +117,11 @@ class GeographicBoundsMap extends StatelessWidget {
                               Text(
                                 '${bounds.latitudeMin.toStringAsFixed(2)}°–${bounds.latitudeMax.toStringAsFixed(2)}° N  •  '
                                 '${bounds.longitudeMin.toStringAsFixed(2)}°–${bounds.longitudeMax.toStringAsFixed(2)}° E',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$aircraftCount aircraft currently tracked',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
