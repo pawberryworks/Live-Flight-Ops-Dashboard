@@ -73,7 +73,12 @@ class _DashboardPageState extends State<DashboardPage> {
   bool? _flightStatesRequestInProgress;
   ValueNotifier<FlightStates?>? _flightStatesNotifier;
   String? _selectedAircraftIcao24;
-  int _selectedPage = 0;
+  // This field must remain nullable so an existing State object created before
+  // the List page was added can survive a hot reload. New fields are injected
+  // as null into an already mounted State object on Flutter web.
+  int? _selectedPage;
+
+  int get _currentPage => _selectedPage ?? 0;
 
   ValueNotifier<FlightStates?> get _flightStates =>
       _flightStatesNotifier ??= ValueNotifier(null);
@@ -191,13 +196,13 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   items: [
                     SideMenuItemDataTile(
-                      isSelected: _selectedPage == 0,
+                      isSelected: _currentPage == 0,
                       title: 'Map',
                       onTap: () => setState(() => _selectedPage = 0),
                       icon: const Icon(Icons.map),
                     ),
                     SideMenuItemDataTile(
-                      isSelected: _selectedPage == 1,
+                      isSelected: _currentPage == 1,
                       title: 'List',
                       onTap: () => setState(() => _selectedPage = 1),
                       icon: const Icon(Icons.list),
@@ -244,7 +249,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   final data = snapshot.requireData;
                   return Padding(
                     padding: const EdgeInsets.all(24),
-                    child: _selectedPage == 1
+                    child: _currentPage == 1
                         ? ValueListenableBuilder<FlightStates?>(
                             valueListenable: _flightStates,
                             builder: (context, flightStates, _) {
