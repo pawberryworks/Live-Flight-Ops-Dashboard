@@ -116,12 +116,15 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Country'));
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(18));
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(18));
+
+    await tester.tap(find.byTooltip('Sort Country ascending'));
     await tester.pump();
 
     var table = tester.widget<DataTable>(find.byType(DataTable));
-    expect(table.sortColumnIndex, 2);
-    expect(table.sortAscending, isTrue);
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(18));
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(17));
     expect(
       table.rows.map((row) => row.key),
       [
@@ -130,11 +133,14 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('Country'));
+    await tester.tap(
+      find.byTooltip('Sorted Country ascending; sort descending'),
+    );
     await tester.pump();
 
     table = tester.widget<DataTable>(find.byType(DataTable));
-    expect(table.sortAscending, isFalse);
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(17));
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(18));
     expect(
       table.rows.map((row) => row.key),
       [
@@ -159,7 +165,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Altitude'));
+    await tester.tap(find.byTooltip('Sort Altitude ascending'));
     await tester.pump();
 
     final table = tester.widget<DataTable>(find.byType(DataTable));

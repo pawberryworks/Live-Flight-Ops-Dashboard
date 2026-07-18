@@ -162,13 +162,19 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
                         headingRowHeight: 76,
-                        sortColumnIndex: _sortColumnIndex,
-                        sortAscending: _sortAscending,
                         columns: [
                           for (var index = 0; index < _columns.length; index++)
                             DataColumn(
                               label: _ColumnFilter(
                                 label: _columns[index],
+                                sortAscending: _sortColumnIndex == index
+                                    ? _sortAscending
+                                    : null,
+                                onSortRequested: (ascending) => setState(() {
+                                  _sortColumnIndex = index;
+                                  _sortAscending = ascending;
+                                  _page = 0;
+                                }),
                                 onChanged: (value) => setState(() {
                                   _page = 0;
                                   final filter = value.trim().toLowerCase();
@@ -179,11 +185,6 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                                   }
                                 }),
                               ),
-                              onSort: (columnIndex, ascending) => setState(() {
-                                _sortColumnIndex = columnIndex;
-                                _sortAscending = ascending;
-                                _page = 0;
-                              }),
                             ),
                           const DataColumn(label: Text('Map')),
                         ],
@@ -338,9 +339,16 @@ class _TablePagination extends StatelessWidget {
 }
 
 class _ColumnFilter extends StatelessWidget {
-  const _ColumnFilter({required this.label, required this.onChanged});
+  const _ColumnFilter({
+    required this.label,
+    required this.sortAscending,
+    required this.onSortRequested,
+    required this.onChanged,
+  });
 
   final String label;
+  final bool? sortAscending;
+  final ValueChanged<bool> onSortRequested;
   final ValueChanged<String> onChanged;
 
   @override
@@ -351,7 +359,32 @@ class _ColumnFilter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, overflow: TextOverflow.ellipsis),
+          Row(
+            children: [
+              Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
+              if (sortAscending == null) ...[
+                _SortButton(
+                  icon: Icons.keyboard_arrow_up,
+                  tooltip: 'Sort $label ascending',
+                  onPressed: () => onSortRequested(true),
+                ),
+                _SortButton(
+                  icon: Icons.keyboard_arrow_down,
+                  tooltip: 'Sort $label descending',
+                  onPressed: () => onSortRequested(false),
+                ),
+              ] else
+                _SortButton(
+                  icon: sortAscending!
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  tooltip: sortAscending!
+                      ? 'Sorted $label ascending; sort descending'
+                      : 'Sorted $label descending; sort ascending',
+                  onPressed: () => onSortRequested(!sortAscending!),
+                ),
+            ],
+          ),
           const SizedBox(height: 4),
           SizedBox(
             height: 36,
@@ -368,6 +401,30 @@ class _ColumnFilter extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SortButton extends StatelessWidget {
+  const _SortButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, size: 18),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 24, height: 24),
     );
   }
 }
