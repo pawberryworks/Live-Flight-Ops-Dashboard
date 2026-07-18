@@ -98,9 +98,84 @@ void main() {
     expect(find.byKey(const ValueKey('flight-row-icao25')), findsOneWidget);
     expect(find.text('26–30 of 30'), findsOneWidget);
   });
+
+  testWidgets('sorts each data column in ascending and descending order', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesTable(
+            bounds: bounds,
+            states: [
+              _aircraft('abc123', 'DLH123', 'Germany'),
+              _aircraft('def456', 'AFR456', 'France'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Country'));
+    await tester.pump();
+
+    var table = tester.widget<DataTable>(find.byType(DataTable));
+    expect(table.sortColumnIndex, 2);
+    expect(table.sortAscending, isTrue);
+    expect(
+      table.rows.map((row) => row.key),
+      [
+        const ValueKey('flight-row-def456'),
+        const ValueKey('flight-row-abc123'),
+      ],
+    );
+
+    await tester.tap(find.text('Country'));
+    await tester.pump();
+
+    table = tester.widget<DataTable>(find.byType(DataTable));
+    expect(table.sortAscending, isFalse);
+    expect(
+      table.rows.map((row) => row.key),
+      [
+        const ValueKey('flight-row-abc123'),
+        const ValueKey('flight-row-def456'),
+      ],
+    );
+  });
+
+  testWidgets('sorts numeric columns by their numeric values', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesTable(
+            bounds: bounds,
+            states: [
+              _aircraft('high', 'HIGH', 'Germany', altitude: 10000),
+              _aircraft('low', 'LOW', 'France', altitude: 900),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Altitude'));
+    await tester.pump();
+
+    final table = tester.widget<DataTable>(find.byType(DataTable));
+    expect(
+      table.rows.map((row) => row.key),
+      [const ValueKey('flight-row-low'), const ValueKey('flight-row-high')],
+    );
+  });
 }
 
-AircraftState _aircraft(String icao24, String callSign, String country) {
+AircraftState _aircraft(
+  String icao24,
+  String callSign,
+  String country, {
+  double altitude = 10000,
+}) {
   return AircraftState(
     icao24: icao24,
     callSign: callSign,
@@ -109,7 +184,7 @@ AircraftState _aircraft(String icao24, String callSign, String country) {
     lastContact: null,
     longitude: 13.4,
     latitude: 52.5,
-    barometricAltitude: 10000,
+    barometricAltitude: altitude,
     onGround: false,
     velocity: 220,
     trueTrack: 90,

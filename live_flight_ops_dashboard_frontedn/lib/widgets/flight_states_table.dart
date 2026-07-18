@@ -43,6 +43,8 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
 
   final Map<int, String> _filters = {};
   int _page = 0;
+  int? _sortColumnIndex;
+  bool _sortAscending = true;
 
   List<String> _values(AircraftState state) => [
     state.icao24.toUpperCase(),
@@ -66,14 +68,54 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
   ];
 
   List<AircraftState> get _filteredStates {
-    if (_filters.isEmpty) return widget.states;
-    return widget.states.where((state) {
-      final values = _values(state);
-      return _filters.entries.every(
-        (filter) => values[filter.key].toLowerCase().contains(filter.value),
-      );
-    }).toList(growable: false);
+    final states = _filters.isEmpty
+        ? widget.states.toList(growable: false)
+        : widget.states.where((state) {
+            final values = _values(state);
+            return _filters.entries.every(
+              (filter) =>
+                  values[filter.key].toLowerCase().contains(filter.value),
+            );
+          }).toList(growable: false);
+
+    final sortColumnIndex = _sortColumnIndex;
+    if (sortColumnIndex != null) {
+      states.sort((left, right) {
+        final comparison = _compareSortValues(
+          _sortValue(left, sortColumnIndex),
+          _sortValue(right, sortColumnIndex),
+        );
+        if (comparison != 0) {
+          return _sortAscending ? comparison : -comparison;
+        }
+        return left.icao24.compareTo(right.icao24);
+      });
+    }
+    return states;
   }
+
+  Object? _sortValue(AircraftState state, int columnIndex) =>
+      switch (columnIndex) {
+        0 => state.icao24.toLowerCase(),
+        1 => state.callSign.toLowerCase(),
+        2 => state.originCountry.toLowerCase(),
+        3 => state.timePosition,
+        4 => state.lastContact,
+        5 => state.latitude,
+        6 => state.longitude,
+        7 => state.barometricAltitude,
+        8 => state.onGround,
+        9 => state.velocity,
+        10 => state.trueTrack,
+        11 => state.verticalRate,
+        12 => state.sensors?.join(', '),
+        13 => state.geometricAltitude,
+        14 => state.squawk?.toLowerCase(),
+        15 => state.spi,
+        16 => state.positionSource,
+        17 => state.category,
+        _ => null,
+      };
 
   @override
   void didUpdateWidget(FlightStatesTable oldWidget) {
@@ -120,20 +162,29 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
                         headingRowHeight: 76,
+                        sortColumnIndex: _sortColumnIndex,
+                        sortAscending: _sortAscending,
                         columns: [
                           for (var index = 0; index < _columns.length; index++)
-                            DataColumn(label: _ColumnFilter(
-                              label: _columns[index],
-                              onChanged: (value) => setState(() {
+                            DataColumn(
+                              label: _ColumnFilter(
+                                label: _columns[index],
+                                onChanged: (value) => setState(() {
+                                  _page = 0;
+                                  final filter = value.trim().toLowerCase();
+                                  if (filter.isEmpty) {
+                                    _filters.remove(index);
+                                  } else {
+                                    _filters[index] = filter;
+                                  }
+                                }),
+                              ),
+                              onSort: (columnIndex, ascending) => setState(() {
+                                _sortColumnIndex = columnIndex;
+                                _sortAscending = ascending;
                                 _page = 0;
-                                final filter = value.trim().toLowerCase();
-                                if (filter.isEmpty) {
-                                  _filters.remove(index);
-                                } else {
-                                  _filters[index] = filter;
-                                }
                               }),
-                            )),
+                            ),
                           const DataColumn(label: Text('Map')),
                         ],
                         rows: [
@@ -327,3 +378,14 @@ String _number(double? value, {required String suffix}) {
 }
 
 String _integer(int? value) => value?.toString() ?? '—';
+
+int _compareSortValues(Object? left, Object? right) {
+  if (identical(left, right)) return 0;
+  if (left == null) return 1;
+  if (right == null) return -1;
+  if (left is num && right is num) return left.compareTo(right);
+  if (left is bool && right is bool) {
+    return (left ? 1 : 0).compareTo(right ? 1 : 0);
+  }
+  return left.toString().compareTo(right.toString());
+}
