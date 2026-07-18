@@ -145,7 +145,7 @@ class GeographicBoundsMap extends StatelessWidget {
                                           child: const OutlinedIcon(
                                             Icons.airplanemode_active,
                                             size: 21,
-                                            color: Colors.red,
+                                            color: Colors.yellow,
                                             outlineColor: Colors.black,
                                           ),
                                         ),
