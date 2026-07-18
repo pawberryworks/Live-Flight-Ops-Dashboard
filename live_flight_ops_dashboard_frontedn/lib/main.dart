@@ -180,9 +180,12 @@ class _DashboardPageState extends State<DashboardPage> {
                           flex: 2,
                           child: Semantics(
                             label: 'Map of the configured geographic bounds',
-                            child: GeographicBoundsMap(
-                              bounds: data.bounds,
+                            child: AircraftMapScope(
                               aircraft: data.flightStates.states,
+                              child: GeographicBoundsMap(
+                                bounds: data.bounds,
+                                aircraftCount: data.flightStates.states.length,
+                              ),
                             ),
                           ),
                         ),

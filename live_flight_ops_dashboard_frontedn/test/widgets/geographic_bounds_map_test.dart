@@ -13,18 +13,21 @@ void main() {
         home: SizedBox(
           width: 800,
           height: 600,
-          child: GeographicBoundsMap(
-            bounds: const GeographicBounds(
-              latitudeMin: 47,
-              latitudeMax: 55,
-              longitudeMin: 5,
-              longitudeMax: 15,
-            ),
+          child: AircraftMapScope(
             aircraft: [
               _aircraft(icao24: 'inside', latitude: 52, longitude: 13),
               _aircraft(icao24: 'outside', latitude: 40, longitude: 13),
               _aircraft(icao24: 'unknown', latitude: null, longitude: null),
             ],
+            child: const GeographicBoundsMap(
+              bounds: GeographicBounds(
+                latitudeMin: 47,
+                latitudeMax: 55,
+                longitudeMin: 5,
+                longitudeMax: 15,
+              ),
+              aircraftCount: 3,
+            ),
           ),
         ),
       ),

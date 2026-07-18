@@ -7,18 +7,43 @@ import '../models/geographic_bounds.dart';
 
 const double _tileSize = 256;
 
+class AircraftMapScope extends InheritedWidget {
+  const AircraftMapScope({
+    required this.aircraft,
+    required super.child,
+    super.key,
+  });
+
+  final List<AircraftState> aircraft;
+
+  static List<AircraftState> of(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<AircraftMapScope>()
+            ?.aircraft ??
+        const [];
+  }
+
+  @override
+  bool updateShouldNotify(AircraftMapScope oldWidget) {
+    return aircraft != oldWidget.aircraft;
+  }
+}
+
 class GeographicBoundsMap extends StatelessWidget {
   const GeographicBoundsMap({
     required this.bounds,
-    required this.aircraft,
+    required this.aircraftCount,
     super.key,
   });
 
   final GeographicBounds bounds;
-  final List<AircraftState> aircraft;
+
+  // Keep this field on the const widget for Flutter hot-reload compatibility.
+  final int aircraftCount;
 
   @override
   Widget build(BuildContext context) {
+    final aircraft = AircraftMapScope.of(context);
     return LayoutBuilder(
       builder: (context, available) {
         final northWest = _project(
@@ -93,7 +118,8 @@ class GeographicBoundsMap extends StatelessWidget {
                                   ),
                                 ),
                               for (final state in aircraft)
-                                if (layout.positionFor(state) case final position?)
+                                if (layout.positionFor(state, bounds)
+                                    case final position?)
                                   Positioned(
                                     key: ValueKey('aircraft-${state.icao24}'),
                                     left: position.dx - 16,
@@ -187,26 +213,11 @@ class GeographicBoundsMap extends StatelessWidget {
 }
 
 class _MapLayout {
-  const _MapLayout({
-    required this.tiles,
-    required this.boundsRectangle,
-    required this.northWest,
-    required this.displayScale,
-    required this.zoom,
-    required this.bounds,
-  });
+  const _MapLayout({required this.tiles, required this.boundsRectangle});
 
   factory _MapLayout.forBounds(GeographicBounds bounds, Size viewport) {
     const padding = 0.0;
-    var zoom = 18;
-    for (; zoom > 0; zoom--) {
-      final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
-      final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
-      if (southEast.dx - northWest.dx <= viewport.width - padding * 2 &&
-          southEast.dy - northWest.dy <= viewport.height - padding * 2) {
-        break;
-      }
-    }
+    final zoom = _zoomForBounds(bounds, viewport, padding);
 
     final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
     final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
@@ -245,23 +256,15 @@ class _MapLayout {
         viewport.width,
         _tileSize * displayScale + 0.5,
       ),
-      northWest: northWest,
-      displayScale: displayScale,
-      zoom: zoom,
-      bounds: bounds,
     );
   }
 
   final List<_MapTile> tiles;
   final Rect boundsRectangle;
-  final Offset northWest;
-  final double displayScale;
-  final int zoom;
-  final GeographicBounds bounds;
 
   double get tileDisplaySize => boundsRectangle.height;
 
-  Offset? positionFor(AircraftState aircraft) {
+  Offset? positionFor(AircraftState aircraft, GeographicBounds bounds) {
     final latitude = aircraft.latitude;
     final longitude = aircraft.longitude;
     if (latitude == null ||
@@ -273,9 +276,47 @@ class _MapLayout {
       return null;
     }
 
+    final northWestAtWorldZoom = _project(
+      bounds.latitudeMax,
+      bounds.longitudeMin,
+      0,
+    );
+    final southEastAtWorldZoom = _project(
+      bounds.latitudeMin,
+      bounds.longitudeMax,
+      0,
+    );
+    final aspectRatio =
+        (southEastAtWorldZoom.dx - northWestAtWorldZoom.dx) /
+        (southEastAtWorldZoom.dy - northWestAtWorldZoom.dy);
+    final viewport = Size(
+      boundsRectangle.width,
+      boundsRectangle.width / aspectRatio,
+    );
+    final zoom = _zoomForBounds(bounds, viewport, 0);
+    final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
+    final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
+    final displayScale = viewport.width / (southEast.dx - northWest.dx);
     final projected = _project(latitude, longitude, zoom);
     return (projected - northWest) * displayScale;
   }
+}
+
+int _zoomForBounds(
+  GeographicBounds bounds,
+  Size viewport,
+  double padding,
+) {
+  var zoom = 18;
+  for (; zoom > 0; zoom--) {
+    final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
+    final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
+    if (southEast.dx - northWest.dx <= viewport.width - padding * 2 &&
+        southEast.dy - northWest.dy <= viewport.height - padding * 2) {
+      break;
+    }
+  }
+  return zoom;
 }
 
 class _MapTile {
