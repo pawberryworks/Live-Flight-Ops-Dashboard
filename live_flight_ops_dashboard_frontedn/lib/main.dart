@@ -182,7 +182,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             label: 'Map of the configured geographic bounds',
                             child: GeographicBoundsMap(
                               bounds: data.bounds,
-                              aircraftCount: data.flightStates.states.length,
+                              aircraft: data.flightStates.states,
                             ),
                           ),
                         ),

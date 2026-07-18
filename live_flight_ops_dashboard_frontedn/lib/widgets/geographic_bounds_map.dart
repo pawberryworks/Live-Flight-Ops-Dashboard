@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
 
 const double _tileSize = 256;
@@ -9,16 +10,12 @@ const double _tileSize = 256;
 class GeographicBoundsMap extends StatelessWidget {
   const GeographicBoundsMap({
     required this.bounds,
-    required this.aircraftCount,
+    required this.aircraft,
     super.key,
   });
 
   final GeographicBounds bounds;
-
-  // Keep this field on the const widget for Flutter hot-reload compatibility.
-  // The count is displayed by FlightStatesList, but removing a field from a
-  // loaded const class requires a full hot restart.
-  final int aircraftCount;
+  final List<AircraftState> aircraft;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +92,39 @@ class GeographicBoundsMap extends StatelessWidget {
                                         ),
                                   ),
                                 ),
+                              for (final state in aircraft)
+                                if (layout.positionFor(state) case final position?)
+                                  Positioned(
+                                    key: ValueKey('aircraft-${state.icao24}'),
+                                    left: position.dx - 16,
+                                    top: position.dy - 16,
+                                    width: 32,
+                                    height: 32,
+                                    child: Tooltip(
+                                      message: _aircraftLabel(state),
+                                      excludeFromSemantics: true,
+                                      child: Semantics(
+                                        label: _aircraftLabel(state),
+                                        child: Transform.rotate(
+                                          angle: (state.trueTrack ?? 0) *
+                                              math.pi /
+                                              180,
+                                          child: Icon(
+                                            Icons.navigation,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            shadows: const [
+                                              Shadow(
+                                                color: Colors.white,
+                                                blurRadius: 3,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                             ],
                           ),
                         ),
@@ -157,7 +187,14 @@ class GeographicBoundsMap extends StatelessWidget {
 }
 
 class _MapLayout {
-  const _MapLayout({required this.tiles, required this.boundsRectangle});
+  const _MapLayout({
+    required this.tiles,
+    required this.boundsRectangle,
+    required this.northWest,
+    required this.displayScale,
+    required this.zoom,
+    required this.bounds,
+  });
 
   factory _MapLayout.forBounds(GeographicBounds bounds, Size viewport) {
     const padding = 0.0;
@@ -208,13 +245,37 @@ class _MapLayout {
         viewport.width,
         _tileSize * displayScale + 0.5,
       ),
+      northWest: northWest,
+      displayScale: displayScale,
+      zoom: zoom,
+      bounds: bounds,
     );
   }
 
   final List<_MapTile> tiles;
   final Rect boundsRectangle;
+  final Offset northWest;
+  final double displayScale;
+  final int zoom;
+  final GeographicBounds bounds;
 
   double get tileDisplaySize => boundsRectangle.height;
+
+  Offset? positionFor(AircraftState aircraft) {
+    final latitude = aircraft.latitude;
+    final longitude = aircraft.longitude;
+    if (latitude == null ||
+        longitude == null ||
+        latitude < bounds.latitudeMin ||
+        latitude > bounds.latitudeMax ||
+        longitude < bounds.longitudeMin ||
+        longitude > bounds.longitudeMax) {
+      return null;
+    }
+
+    final projected = _project(latitude, longitude, zoom);
+    return (projected - northWest) * displayScale;
+  }
 }
 
 class _MapTile {
@@ -243,4 +304,14 @@ Offset _project(double latitude, double longitude, int zoom) {
         2 *
         scale,
   );
+}
+
+String _aircraftLabel(AircraftState aircraft) {
+  final identifier = aircraft.callSign.isNotEmpty
+      ? aircraft.callSign
+      : aircraft.icao24.toUpperCase();
+  final altitude = aircraft.barometricAltitude;
+  return altitude == null
+      ? identifier
+      : '$identifier • ${altitude.toStringAsFixed(0)} m';
 }
