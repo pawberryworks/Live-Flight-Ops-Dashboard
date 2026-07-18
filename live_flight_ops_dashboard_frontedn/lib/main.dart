@@ -11,6 +11,7 @@ import 'services/geographic_bounds_service.dart';
 import 'services/refresh_interval_service.dart';
 import 'theme/app_colors.dart';
 import 'widgets/flight_states_list.dart';
+import 'widgets/flight_states_table.dart';
 import 'widgets/geographic_bounds_map.dart';
 
 void main() {
@@ -72,6 +73,12 @@ class _DashboardPageState extends State<DashboardPage> {
   bool? _flightStatesRequestInProgress;
   ValueNotifier<FlightStates?>? _flightStatesNotifier;
   String? _selectedAircraftIcao24;
+  // This field must remain nullable so an existing State object created before
+  // the List page was added can survive a hot reload. New fields are injected
+  // as null into an already mounted State object on Flutter web.
+  int? _selectedPage;
+
+  int get _currentPage => _selectedPage ?? 0;
 
   ValueNotifier<FlightStates?> get _flightStates =>
       _flightStatesNotifier ??= ValueNotifier(null);
@@ -188,8 +195,18 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                   ),
                   items: [
-                    SideMenuItemDataTile(isSelected: true, title: 'Map', onTap: () {}, icon: Icon(Icons.map)),
-                    SideMenuItemDataTile(isSelected: false, title: 'List', onTap: () {}, icon: Icon(Icons.list)),
+                    SideMenuItemDataTile(
+                      isSelected: _currentPage == 0,
+                      title: 'Map',
+                      onTap: () => setState(() => _selectedPage = 0),
+                      icon: const Icon(Icons.map),
+                    ),
+                    SideMenuItemDataTile(
+                      isSelected: _currentPage == 1,
+                      title: 'List',
+                      onTap: () => setState(() => _selectedPage = 1),
+                      icon: const Icon(Icons.list),
+                    ),
                   ],
                   footer: IconButton(
                     icon: Icon(
@@ -232,49 +249,67 @@ class _DashboardPageState extends State<DashboardPage> {
                   final data = snapshot.requireData;
                   return Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    child: IndexedStack(
+                      index: _currentPage,
                       children: [
-                        Expanded(
-                          flex: 2,
-                          child: Semantics(
-                            label: 'Map of the configured geographic bounds',
-                            child: ValueListenableBuilder<FlightStates?>(
-                              valueListenable: _flightStates,
-                              child: GeographicBoundsMap(
-                                bounds: data.bounds,
-                                aircraftCount: data.flightStates.states.length,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: Semantics(
+                                label:
+                                    'Map of the configured geographic bounds',
+                                child: ValueListenableBuilder<FlightStates?>(
+                                  valueListenable: _flightStates,
+                                  child: GeographicBoundsMap(
+                                    bounds: data.bounds,
+                                    aircraftCount:
+                                        data.flightStates.states.length,
+                                  ),
+                                  builder: (context, flightStates, map) {
+                                    return AircraftMapScope(
+                                      aircraft:
+                                          flightStates?.states ?? const [],
+                                      selectedAircraftIcao24:
+                                          _selectedAircraftIcao24,
+                                      onAircraftSelected: _selectAircraft,
+                                      onAircraftDeselected:
+                                          _clearAircraftSelection,
+                                      child: map!,
+                                    );
+                                  },
+                                ),
                               ),
-                              builder: (context, flightStates, map) {
-                                return AircraftMapScope(
-                                  aircraft: flightStates?.states ?? const [],
-                                  selectedAircraftIcao24:
-                                      _selectedAircraftIcao24,
-                                  onAircraftSelected: _selectAircraft,
-                                  onAircraftDeselected:
-                                      _clearAircraftSelection,
-                                  child: map!,
-                                );
-                              },
                             ),
-                          ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: ValueListenableBuilder<FlightStates?>(
+                                valueListenable: _flightStates,
+                                builder: (context, flightStates, _) {
+                                  return FlightStatesList(
+                                    states:
+                                        flightStates?.states ?? const [],
+                                    selectedAircraftIcao24:
+                                        _selectedAircraftIcao24,
+                                    onAircraftSelected: _selectAircraft,
+                                    onAircraftDeselected:
+                                        _clearAircraftSelection,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: ValueListenableBuilder<FlightStates?>(
+                        ValueListenableBuilder<FlightStates?>(
                             valueListenable: _flightStates,
                             builder: (context, flightStates, _) {
-                              return FlightStatesList(
+                              return FlightStatesTable(
                                 states: flightStates?.states ?? const [],
-                                selectedAircraftIcao24:
-                                    _selectedAircraftIcao24,
-                                onAircraftSelected: _selectAircraft,
-                                onAircraftDeselected:
-                                    _clearAircraftSelection,
+                                bounds: data.bounds,
                               );
                             },
                           ),
-                        ),
                       ],
                     ),
                   );

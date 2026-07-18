@@ -26,26 +26,24 @@ class AircraftState {
     }
 
     return AircraftState(
-      icao24: json[0] as String? ?? '',
-      callSign: (json[1] as String? ?? '').trim(),
-      originCountry: json[2] as String? ?? '',
-      timePosition: (json[3] as num?)?.toInt(),
-      lastContact: (json[4] as num?)?.toInt(),
-      longitude: (json[5] as num?)?.toDouble(),
-      latitude: (json[6] as num?)?.toDouble(),
-      barometricAltitude: (json[7] as num?)?.toDouble(),
-      onGround: json[8] as bool? ?? false,
-      velocity: (json[9] as num?)?.toDouble(),
-      trueTrack: (json[10] as num?)?.toDouble(),
-      verticalRate: (json[11] as num?)?.toDouble(),
-      sensors: (json[12] as List<dynamic>?)
-          ?.map((sensor) => (sensor as num).toInt())
-          .toList(growable: false),
-      geometricAltitude: (json[13] as num?)?.toDouble(),
-      squawk: json[14] as String?,
-      spi: json[15] as bool? ?? false,
-      positionSource: (json[16] as num?)?.toInt() ?? 0,
-      category: (json[17] as num?)?.toInt() ?? 0,
+      icao24: _string(json[0]),
+      callSign: _string(json[1]).trim(),
+      originCountry: _string(json[2]),
+      timePosition: _int(json[3]),
+      lastContact: _int(json[4]),
+      longitude: _double(json[5]),
+      latitude: _double(json[6]),
+      barometricAltitude: _double(json[7]),
+      onGround: _bool(json[8]),
+      velocity: _double(json[9]),
+      trueTrack: _double(json[10]),
+      verticalRate: _double(json[11]),
+      sensors: _intList(json[12]),
+      geometricAltitude: _double(json[13]),
+      squawk: _nullableString(json[14]),
+      spi: _bool(json[15]),
+      positionSource: _int(json[16]) ?? 0,
+      category: _int(json[17]) ?? 0,
     );
   }
 
@@ -67,4 +65,22 @@ class AircraftState {
   final bool spi;
   final int positionSource;
   final int category;
+}
+
+String _string(Object? value) => value is String ? value : '';
+
+String? _nullableString(Object? value) => value is String ? value : null;
+
+int? _int(Object? value) => value is num ? value.toInt() : null;
+
+double? _double(Object? value) => value is num ? value.toDouble() : null;
+
+bool _bool(Object? value) => value is bool ? value : false;
+
+List<int>? _intList(Object? value) {
+  if (value is! List<dynamic>) return null;
+  return value
+      .whereType<num>()
+      .map((item) => item.toInt())
+      .toList(growable: false);
 }
