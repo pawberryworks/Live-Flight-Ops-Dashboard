@@ -117,15 +117,21 @@ class GeographicBoundsMap extends StatelessWidget {
                                         ),
                                   ),
                                 ),
+                              Positioned.fill(
+                                child: ColoredBox(
+                                  key: const ValueKey('map-dark-overlay'),
+                                  color: Colors.black.withValues(alpha: 0.32),
+                                ),
+                              ),
                               for (final state in aircraft)
                                 if (layout.positionFor(state, bounds)
                                     case final position?)
                                   Positioned(
                                     key: ValueKey('aircraft-${state.icao24}'),
-                                    left: position.dx - 16,
-                                    top: position.dy - 16,
-                                    width: 32,
-                                    height: 32,
+                                    left: position.dx - 14,
+                                    top: position.dy - 14,
+                                    width: 28,
+                                    height: 28,
                                     child: Tooltip(
                                       message: _aircraftLabel(state),
                                       excludeFromSemantics: true,
@@ -135,15 +141,18 @@ class GeographicBoundsMap extends StatelessWidget {
                                           angle: (state.trueTrack ?? 0) *
                                               math.pi /
                                               180,
-                                          child: Icon(
-                                            Icons.navigation,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.primary,
-                                            shadows: const [
-                                              Shadow(
-                                                color: Colors.white,
-                                                blurRadius: 3,
+                                          child: const Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.airplanemode_active,
+                                                size: 27,
+                                                color: Colors.black,
+                                              ),
+                                              Icon(
+                                                Icons.airplanemode_active,
+                                                size: 21,
+                                                color: Colors.red,
                                               ),
                                             ],
                                           ),

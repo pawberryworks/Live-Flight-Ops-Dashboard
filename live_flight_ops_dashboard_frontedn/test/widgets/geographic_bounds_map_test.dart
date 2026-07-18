@@ -36,7 +36,18 @@ void main() {
     expect(find.byKey(const ValueKey('aircraft-inside')), findsOneWidget);
     expect(find.byKey(const ValueKey('aircraft-outside')), findsNothing);
     expect(find.byKey(const ValueKey('aircraft-unknown')), findsNothing);
-    expect(find.byIcon(Icons.navigation), findsOneWidget);
+    expect(find.byIcon(Icons.airplanemode_active), findsNWidgets(2));
+    final planeIcons = tester.widgetList<Icon>(
+      find.byIcon(Icons.airplanemode_active),
+    );
+    expect(
+      planeIcons.map((icon) => icon.color),
+      containsAll([Colors.red, Colors.black]),
+    );
+    final overlay = tester.widget<ColoredBox>(
+      find.byKey(const ValueKey('map-dark-overlay')),
+    );
+    expect(overlay.color, Colors.black.withValues(alpha: 0.32));
     expect(find.bySemanticsLabel('TEST123 • 10000 m'), findsOneWidget);
   });
 }
