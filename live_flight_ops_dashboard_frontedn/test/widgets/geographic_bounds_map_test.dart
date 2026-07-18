@@ -127,6 +127,56 @@ void main() {
 
     expect(selectionCleared, isTrue);
   });
+
+  testWidgets('keeps the map rendered while the app theme changes', (
+    tester,
+  ) async {
+    var themeMode = ThemeMode.light;
+    late StateSetter updateApp;
+
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, setState) {
+          updateApp = setState;
+          return MaterialApp(
+            theme: ThemeData.light(),
+            darkTheme: ThemeData.dark(),
+            themeMode: themeMode,
+            home: SizedBox(
+              width: 800,
+              height: 600,
+              child: AircraftMapScope(
+                aircraft: [
+                  _aircraft(icao24: 'abc123', latitude: 52, longitude: 13),
+                ],
+                selectedAircraftIcao24: null,
+                onAircraftSelected: (_) {},
+                onAircraftDeselected: () {},
+                child: const GeographicBoundsMap(
+                  bounds: GeographicBounds(
+                    latitudeMin: 47,
+                    latitudeMax: 55,
+                    longitudeMin: 5,
+                    longitudeMax: 15,
+                  ),
+                  aircraftCount: 1,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    updateApp(() => themeMode = ThemeMode.dark);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('aircraft-abc123')), findsOneWidget);
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
+  });
 }
 
 AircraftState _aircraft({
