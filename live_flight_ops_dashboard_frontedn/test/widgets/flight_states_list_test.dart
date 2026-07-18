@@ -55,6 +55,24 @@ void main() {
     expect(tile.selected, isTrue);
     expect(tile.selectedTileColor, isNotNull);
   });
+
+  testWidgets('reports the flight selected from the list', (tester) async {
+    String? selectedAircraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesList(
+            states: [_aircraft(icao24: 'abc123', originCountry: 'Germany')],
+            onAircraftSelected: (icao24) => selectedAircraft = icao24,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('flight-abc123')));
+
+    expect(selectedAircraft, 'abc123');
+  });
 }
 
 AircraftState _aircraft({

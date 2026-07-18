@@ -6,14 +6,17 @@ class FlightStatesList extends StatelessWidget {
   const FlightStatesList({
     required this.states,
     this.selectedAircraftIcao24,
+    this.onAircraftSelected,
     super.key,
   });
 
   final List<AircraftState> states;
   final String? selectedAircraftIcao24;
+  final ValueChanged<String>? onAircraftSelected;
 
   @override
   Widget build(BuildContext context) {
+    final selectAircraft = onAircraftSelected;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -45,6 +48,9 @@ class FlightStatesList extends StatelessWidget {
                       state: states[index],
                       isSelected:
                           states[index].icao24 == selectedAircraftIcao24,
+                      onTap: selectAircraft == null
+                          ? null
+                          : () => selectAircraft(states[index].icao24),
                     ),
                   ),
           ),
@@ -55,10 +61,15 @@ class FlightStatesList extends StatelessWidget {
 }
 
 class _FlightListItem extends StatelessWidget {
-  const _FlightListItem({required this.state, required this.isSelected});
+  const _FlightListItem({
+    required this.state,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   final AircraftState state;
   final bool isSelected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +86,7 @@ class _FlightListItem extends StatelessWidget {
         key: ValueKey('flight-${state.icao24}'),
         selected: isSelected,
         selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+        onTap: onTap,
         leading: Icon(
           state.onGround ? Icons.flight_land : Icons.flight,
           color: Theme.of(context).colorScheme.primary,

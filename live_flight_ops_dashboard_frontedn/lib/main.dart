@@ -264,6 +264,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 states: flightStates?.states ?? const [],
                                 selectedAircraftIcao24:
                                     _selectedAircraftIcao24,
+                                onAircraftSelected: _selectAircraft,
                               );
                             },
                           ),

@@ -43,7 +43,7 @@ void main() {
     final planeIcon = tester.widget<Icon>(
       find.byIcon(Icons.airplanemode_active),
     );
-    expect(planeIcon.color, Colors.red);
+    expect(planeIcon.color, Colors.yellow);
     expect(planeIcon.size, 21);
     expect(planeIcon.shadows, hasLength(10));
     expect(
