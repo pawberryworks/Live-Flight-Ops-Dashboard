@@ -22,12 +22,12 @@ class MainApp extends StatelessWidget {
               'icons/logo-white.svg',
               height: 80,
               colorFilter: ColorFilter.mode(
-                AppColors.light.surface,
+                AppColorSchemes.light.onPrimary,
                 BlendMode.srcIn,
               ),
             ),
           ),
-          backgroundColor: AppColors.light.brandPrimary,
+          backgroundColor: AppColorSchemes.light.primary,
           toolbarHeight: 112,
         ),
         body: Center(
