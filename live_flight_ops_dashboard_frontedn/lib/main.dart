@@ -70,6 +70,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Timer? _flightStatesRefreshTimer;
   GeographicBounds? _bounds;
   bool _flightStatesRequestInProgress = false;
+  final ValueNotifier<FlightStates?> _flightStates = ValueNotifier(null);
 
   @override
   void initState() {
@@ -89,6 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
       _flightStatesService.getFlightStates(),
     ]);
     _bounds = results[0] as GeographicBounds;
+    _flightStates.value = results[1] as FlightStates;
     if (mounted) {
       _flightStatesRefreshTimer = Timer.periodic(
         refreshInterval,
@@ -114,11 +116,7 @@ class _DashboardPageState extends State<DashboardPage> {
         return;
       }
 
-      setState(() {
-        _dashboardData = Future.value(
-          _DashboardData(bounds: bounds, flightStates: flightStates),
-        );
-      });
+      _flightStates.value = flightStates;
     } on FlightStatesException {
       // Keep the last successful response visible and retry on the next tick.
     } finally {
@@ -136,6 +134,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _geographicBoundsService.close();
     _flightStatesService.close();
     _refreshIntervalService.close();
+    _flightStates.dispose();
     super.dispose();
   }
 
@@ -224,19 +223,30 @@ class _DashboardPageState extends State<DashboardPage> {
                           flex: 2,
                           child: Semantics(
                             label: 'Map of the configured geographic bounds',
-                            child: AircraftMapScope(
-                              aircraft: data.flightStates.states,
+                            child: ValueListenableBuilder<FlightStates?>(
+                              valueListenable: _flightStates,
                               child: GeographicBoundsMap(
                                 bounds: data.bounds,
                                 aircraftCount: data.flightStates.states.length,
                               ),
+                              builder: (context, flightStates, map) {
+                                return AircraftMapScope(
+                                  aircraft: flightStates?.states ?? const [],
+                                  child: map!,
+                                );
+                              },
                             ),
                           ),
                         ),
                         const SizedBox(width: 24),
                         Expanded(
-                          child: FlightStatesList(
-                            states: data.flightStates.states,
+                          child: ValueListenableBuilder<FlightStates?>(
+                            valueListenable: _flightStates,
+                            builder: (context, flightStates, _) {
+                              return FlightStatesList(
+                                states: flightStates?.states ?? const [],
+                              );
+                            },
                           ),
                         ),
                       ],
