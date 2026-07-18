@@ -66,6 +66,38 @@ void main() {
     expect(find.byKey(const ValueKey('aircraft-abc123')), findsOneWidget);
     expect(find.byKey(const ValueKey('aircraft-def456')), findsNothing);
   });
+
+  testWidgets('only builds the current page of a large flight list', (
+    tester,
+  ) async {
+    final states = List.generate(
+      30,
+      (index) => _aircraft(
+        'icao${index.toString().padLeft(2, '0')}',
+        'CALL$index',
+        'Germany',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesTable(bounds: bounds, states: states),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('flight-row-icao00')), findsOneWidget);
+    expect(find.byKey(const ValueKey('flight-row-icao24')), findsOneWidget);
+    expect(find.byKey(const ValueKey('flight-row-icao25')), findsNothing);
+    expect(find.text('1–25 of 30'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Next page'));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('flight-row-icao00')), findsNothing);
+    expect(find.byKey(const ValueKey('flight-row-icao25')), findsOneWidget);
+    expect(find.text('26–30 of 30'), findsOneWidget);
+  });
 }
 
 AircraftState _aircraft(String icao24, String callSign, String country) {

@@ -19,6 +19,7 @@ class FlightStatesTable extends StatefulWidget {
 }
 
 class _FlightStatesTableState extends State<FlightStatesTable> {
+  static const _rowsPerPage = 25;
   static const _columns = <String>[
     'ICAO24',
     'Call sign',
@@ -41,6 +42,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
   ];
 
   final Map<int, String> _filters = {};
+  int _page = 0;
 
   List<String> _values(AircraftState state) => [
     state.icao24.toUpperCase(),
@@ -63,16 +65,33 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     state.category.toString(),
   ];
 
-  List<AircraftState> get _filteredStates => widget.states.where((state) {
-    final values = _values(state);
-    return _filters.entries.every(
-      (filter) => values[filter.key].toLowerCase().contains(filter.value),
-    );
-  }).toList(growable: false);
+  List<AircraftState> get _filteredStates {
+    if (_filters.isEmpty) return widget.states;
+    return widget.states.where((state) {
+      final values = _values(state);
+      return _filters.entries.every(
+        (filter) => values[filter.key].toLowerCase().contains(filter.value),
+      );
+    }).toList(growable: false);
+  }
+
+  @override
+  void didUpdateWidget(FlightStatesTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final lastPage = _lastPageFor(_filteredStates.length);
+    if (_page > lastPage) _page = lastPage;
+  }
 
   @override
   Widget build(BuildContext context) {
     final filteredStates = _filteredStates;
+    final lastPage = _lastPageFor(filteredStates.length);
+    final page = _page > lastPage ? lastPage : _page;
+    final firstRow = page * _rowsPerPage;
+    final pageStates = filteredStates
+        .skip(firstRow)
+        .take(_rowsPerPage)
+        .toList(growable: false);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -106,6 +125,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                             DataColumn(label: _ColumnFilter(
                               label: _columns[index],
                               onChanged: (value) => setState(() {
+                                _page = 0;
                                 final filter = value.trim().toLowerCase();
                                 if (filter.isEmpty) {
                                   _filters.remove(index);
@@ -117,7 +137,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                           const DataColumn(label: Text('Map')),
                         ],
                         rows: [
-                          for (final state in filteredStates)
+                          for (final state in pageStates)
                             DataRow(
                               key: ValueKey('flight-row-${state.icao24}'),
                               cells: [
@@ -143,9 +163,24 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
               padding: EdgeInsets.only(bottom: 20),
               child: Center(child: Text('No flights match the filters.')),
             ),
+          if (filteredStates.isNotEmpty)
+            _TablePagination(
+              firstRow: firstRow + 1,
+              lastRow: firstRow + pageStates.length,
+              totalRows: filteredStates.length,
+              canGoBack: page > 0,
+              canGoForward: page < lastPage,
+              onBack: () => setState(() => _page = page - 1),
+              onForward: () => setState(() => _page = page + 1),
+            ),
         ],
       ),
     );
+  }
+
+  int _lastPageFor(int rowCount) {
+    if (rowCount == 0) return 0;
+    return (rowCount - 1) ~/ _rowsPerPage;
   }
 
   Future<void> _showFlightMap(AircraftState state) {
@@ -196,6 +231,55 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TablePagination extends StatelessWidget {
+  const _TablePagination({
+    required this.firstRow,
+    required this.lastRow,
+    required this.totalRows,
+    required this.canGoBack,
+    required this.canGoForward,
+    required this.onBack,
+    required this.onForward,
+  });
+
+  final int firstRow;
+  final int lastRow;
+  final int totalRows;
+  final bool canGoBack;
+  final bool canGoForward;
+  final VoidCallback onBack;
+  final VoidCallback onForward;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text('$firstRow–$lastRow of $totalRows'),
+            const SizedBox(width: 16),
+            IconButton(
+              tooltip: 'Previous page',
+              onPressed: canGoBack ? onBack : null,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            IconButton(
+              tooltip: 'Next page',
+              onPressed: canGoForward ? onForward : null,
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
         ),
       ),
     );
