@@ -250,7 +250,13 @@ class _AircraftMarkers extends StatelessWidget {
 }
 
 class _MapLayout {
-  const _MapLayout({required this.tiles, required this.boundsRectangle});
+  const _MapLayout({
+    required this.tiles,
+    required this.boundsRectangle,
+    required this.zoom,
+    required this.northWest,
+    required this.displayScale,
+  });
 
   factory _MapLayout.forBounds(GeographicBounds bounds, Size viewport) {
     const padding = 0.0;
@@ -293,11 +299,17 @@ class _MapLayout {
         viewport.width,
         _tileSize * displayScale + 0.5,
       ),
+      zoom: zoom,
+      northWest: northWest,
+      displayScale: displayScale,
     );
   }
 
   final List<_MapTile> tiles;
   final Rect boundsRectangle;
+  final int zoom;
+  final Offset northWest;
+  final double displayScale;
 
   double get tileDisplaySize => boundsRectangle.height;
 
@@ -313,27 +325,9 @@ class _MapLayout {
       return null;
     }
 
-    final northWestAtWorldZoom = _project(
-      bounds.latitudeMax,
-      bounds.longitudeMin,
-      0,
-    );
-    final southEastAtWorldZoom = _project(
-      bounds.latitudeMin,
-      bounds.longitudeMax,
-      0,
-    );
-    final aspectRatio =
-        (southEastAtWorldZoom.dx - northWestAtWorldZoom.dx) /
-        (southEastAtWorldZoom.dy - northWestAtWorldZoom.dy);
-    final viewport = Size(
-      boundsRectangle.width,
-      boundsRectangle.width / aspectRatio,
-    );
-    final zoom = _zoomForBounds(bounds, viewport, 0);
-    final northWest = _project(bounds.latitudeMax, bounds.longitudeMin, zoom);
-    final southEast = _project(bounds.latitudeMin, bounds.longitudeMax, zoom);
-    final displayScale = viewport.width / (southEast.dx - northWest.dx);
+    // The viewport transform is shared by every marker. It is calculated once
+    // in [forBounds] rather than recalculating the zoom and bounds for every
+    // aircraft whenever live flight data refreshes.
     final projected = _project(latitude, longitude, zoom);
     return (projected - northWest) * displayScale;
   }
