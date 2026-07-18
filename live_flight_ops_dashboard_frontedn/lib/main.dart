@@ -64,13 +64,20 @@ class _DashboardPageState extends State<DashboardPage> {
   final GeographicBoundsService _geographicBoundsService =
       GeographicBoundsService();
   final FlightStatesService _flightStatesService = FlightStatesService();
-  final RefreshIntervalService _refreshIntervalService =
-      RefreshIntervalService();
+  RefreshIntervalService? _refreshIntervalServiceInstance;
   late Future<_DashboardData> _dashboardData;
   Timer? _flightStatesRefreshTimer;
   GeographicBounds? _bounds;
-  bool _flightStatesRequestInProgress = false;
-  final ValueNotifier<FlightStates?> _flightStates = ValueNotifier(null);
+  // Keep newly added state nullable and lazily initialized so hot reload can
+  // migrate dashboard State objects that were created before these fields
+  // existed.
+  bool? _flightStatesRequestInProgress;
+  ValueNotifier<FlightStates?>? _flightStatesNotifier;
+
+  ValueNotifier<FlightStates?> get _flightStates =>
+      _flightStatesNotifier ??= ValueNotifier(null);
+  RefreshIntervalService get _refreshIntervalService =>
+      _refreshIntervalServiceInstance ??= RefreshIntervalService();
 
   @override
   void initState() {
@@ -105,7 +112,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _refreshFlightStates() async {
     final bounds = _bounds;
-    if (!mounted || bounds == null || _flightStatesRequestInProgress) {
+    if (!mounted ||
+        bounds == null ||
+        _flightStatesRequestInProgress == true) {
       return;
     }
 
@@ -133,8 +142,8 @@ class _DashboardPageState extends State<DashboardPage> {
     _flightStatesRefreshTimer?.cancel();
     _geographicBoundsService.close();
     _flightStatesService.close();
-    _refreshIntervalService.close();
-    _flightStates.dispose();
+    _refreshIntervalServiceInstance?.close();
+    _flightStatesNotifier?.dispose();
     super.dispose();
   }
 
