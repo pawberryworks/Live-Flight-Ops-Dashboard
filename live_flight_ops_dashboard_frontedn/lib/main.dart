@@ -7,6 +7,7 @@ import 'models/geographic_bounds.dart';
 import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
 import 'theme/app_colors.dart';
+import 'widgets/flight_states_list.dart';
 import 'widgets/geographic_bounds_map.dart';
 
 void main() {
@@ -170,14 +171,25 @@ class _DashboardPageState extends State<DashboardPage> {
                   }
 
                   final data = snapshot.requireData;
-                  return Semantics(
-                    label: 'Map of the configured geographic bounds',
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: GeographicBoundsMap(
-                        bounds: data.bounds,
-                        aircraftCount: data.flightStates.states.length,
-                      ),
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Semantics(
+                            label: 'Map of the configured geographic bounds',
+                            child: GeographicBoundsMap(bounds: data.bounds),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          child: FlightStatesList(
+                            states: data.flightStates.states,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
