@@ -153,7 +153,12 @@ class _FlightListItem extends StatelessWidget {
             state.onGround ? Icons.flight_land : Icons.flight,
             color: Theme.of(context).colorScheme.primary,
           ),
-          title: Text(callSign),
+          title: Text(
+            callSign,
+            style: TextStyle(
+              color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface
+            ),
+          ),
           subtitle: Text(
             [
               state.originCountry,
@@ -162,6 +167,9 @@ class _FlightListItem extends StatelessWidget {
             ].join('  •  '),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant
+            ),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -170,13 +178,11 @@ class _FlightListItem extends StatelessWidget {
                 key: ValueKey('flight-details-${state.icao24}'),
                 tooltip: 'Flight details',
                 onPressed: () => showFlightDetailsDialog(context, state),
-                icon: const Icon(Icons.info_outline),
+                icon: Icon(
+                  Icons.info_outline, 
+                  size: 20, 
+                  color: Theme.of(context).colorScheme.outline),
               ),
-              if (state.onGround)
-                const Tooltip(
-                  message: 'On ground',
-                  child: Icon(Icons.circle, size: 10),
-                ),
             ],
           ),
         ),
