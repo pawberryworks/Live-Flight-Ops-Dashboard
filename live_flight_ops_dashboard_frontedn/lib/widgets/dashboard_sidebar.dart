@@ -6,11 +6,13 @@ class DashboardSidebar extends StatelessWidget {
     required this.selectedPage,
     required this.onPageSelected,
     required this.onToggleTheme,
+    this.flightStatesTime,
   });
 
   final int selectedPage;
   final ValueChanged<int> onPageSelected;
   final VoidCallback onToggleTheme;
+  final int? flightStatesTime;
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +108,8 @@ class DashboardSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              _FlightDataTimestamp(time: flightStatesTime),
+              const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: onToggleTheme,
                 icon: Icon(
@@ -121,6 +125,64 @@ class DashboardSidebar extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FlightDataTimestamp extends StatelessWidget {
+  const _FlightDataTimestamp({required this.time});
+
+  final int? time;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final localizations = MaterialLocalizations.of(context);
+    final timestamp = time == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(time! * 1000).toLocal();
+    final timestampLabel = timestamp == null
+        ? 'Awaiting flight data'
+        : '${localizations.formatMediumDate(timestamp)} at '
+            '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(timestamp))}';
+
+    return Semantics(
+      label: 'Flight data timestamp: $timestampLabel',
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.schedule_rounded, color: colors.secondary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Data as of',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    timestampLabel,
+                    key: const ValueKey('flight-data-timestamp'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -257,4 +319,3 @@ class _NavigationItem extends StatelessWidget {
     );
   }
 }
-

@@ -137,23 +137,24 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: [
-          DashboardSidebar(
-            selectedPage: _selectedPage,
-            onPageSelected: (page) => setState(() => _selectedPage = page),
-            onToggleTheme: widget.onToggleTheme,
-          ),
-          Expanded(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) => _DashboardBody(
+      body: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) => Row(
+          children: [
+            DashboardSidebar(
+              selectedPage: _selectedPage,
+              onPageSelected: (page) => setState(() => _selectedPage = page),
+              onToggleTheme: widget.onToggleTheme,
+              flightStatesTime: _controller.state.flightStates?.time,
+            ),
+            Expanded(
+              child: _DashboardBody(
                 controller: _controller,
                 selectedPage: _selectedPage,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
