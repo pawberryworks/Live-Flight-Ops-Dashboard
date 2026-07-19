@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../helpers/timestamp_helpers.dart';
+
 class DashboardSidebar extends StatelessWidget {
   const DashboardSidebar({
     required this.selectedPage,
@@ -140,13 +142,9 @@ class _FlightDataTimestamp extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final localizations = MaterialLocalizations.of(context);
-    final timestamp = time == null
-        ? null
-        : DateTime.fromMillisecondsSinceEpoch(time! * 1000).toLocal();
-    final timestampLabel = timestamp == null
+    final timestampLabel = time == null
         ? 'Awaiting flight data'
-        : '${localizations.formatMediumDate(timestamp)} at '
-            '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(timestamp))}';
+        : timestamp_to_string(time!);
 
     return Semantics(
       label: 'Flight data timestamp: $timestampLabel',
