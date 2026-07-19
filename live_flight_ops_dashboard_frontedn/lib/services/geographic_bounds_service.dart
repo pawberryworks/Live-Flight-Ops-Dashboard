@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -6,23 +7,39 @@ import '../core/api_configuration.dart';
 import '../models/geographic_bounds.dart';
 
 class GeographicBoundsService {
-  GeographicBoundsService({http.Client? client, ApiConfiguration? configuration})
+  GeographicBoundsService({
+    http.Client? client,
+    ApiConfiguration? configuration,
+    Duration requestTimeout = const Duration(seconds: 15),
+  })
     : _client = client ?? http.Client(),
       _geographicBoundsUri =
           (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
             '/api/geographicBounds',
-          );
+          ),
+      _requestTimeout = requestTimeout;
 
   final http.Client _client;
   final Uri _geographicBoundsUri;
+  final Duration _requestTimeout;
 
   void close() => _client.close();
 
   Future<GeographicBounds> getGeographicBounds() async {
-    final response = await _client.get(
-      _geographicBoundsUri,
-      headers: const {'Accept': 'application/json'},
-    );
+    late http.Response response;
+    try {
+      response = await _client
+          .get(
+            _geographicBoundsUri,
+            headers: const {'Accept': 'application/json'},
+          )
+          .timeout(_requestTimeout);
+    } on TimeoutException catch (error) {
+      throw GeographicBoundsException(
+        'Timed out while loading geographic bounds.',
+        error,
+      );
+    }
 
     if (response.statusCode != 200) {
       throw GeographicBoundsException(

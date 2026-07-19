@@ -11,13 +11,16 @@ class DashboardController extends ChangeNotifier {
     required FlightStatesRepository flightStatesRepository,
     required GeographicBoundsRepository geographicBoundsRepository,
     required RefreshIntervalRepository refreshIntervalRepository,
+    Iterable<Disposable> resources = const [],
   }) : _flightStatesRepository = flightStatesRepository,
        _geographicBoundsRepository = geographicBoundsRepository,
-       _refreshIntervalRepository = refreshIntervalRepository;
+       _refreshIntervalRepository = refreshIntervalRepository,
+       _resources = List.unmodifiable(resources);
 
   final FlightStatesRepository _flightStatesRepository;
   final GeographicBoundsRepository _geographicBoundsRepository;
   final RefreshIntervalRepository _refreshIntervalRepository;
+  final List<Disposable> _resources;
 
   DashboardState _state = const DashboardState.loading();
   DashboardState get state => _state;
@@ -25,8 +28,10 @@ class DashboardController extends ChangeNotifier {
   Timer? _refreshTimer;
   bool _refreshInProgress = false;
   bool _isDisposed = false;
+  int _loadGeneration = 0;
 
   Future<void> load() async {
+    final loadGeneration = ++_loadGeneration;
     _refreshTimer?.cancel();
     _setState(const DashboardState.loading());
     try {
@@ -35,7 +40,7 @@ class DashboardController extends ChangeNotifier {
         _geographicBoundsRepository.getGeographicBounds(),
         _flightStatesRepository.getFlightStates(),
       ]);
-      if (_isDisposed) return;
+      if (_isDisposed || loadGeneration != _loadGeneration) return;
 
       _setState(
         DashboardState.ready(
@@ -46,7 +51,7 @@ class DashboardController extends ChangeNotifier {
       );
       _startRefreshTimer(refreshInterval);
     } catch (error) {
-      if (_isDisposed) return;
+      if (_isDisposed || loadGeneration != _loadGeneration) return;
       _setState(DashboardState.failure(error));
     }
   }
@@ -97,10 +102,11 @@ class DashboardController extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    _loadGeneration++;
     _refreshTimer?.cancel();
-    _flightStatesRepository.close();
-    _geographicBoundsRepository.close();
-    _refreshIntervalRepository.close();
+    for (final resource in _resources) {
+      resource.dispose();
+    }
     super.dispose();
   }
 }

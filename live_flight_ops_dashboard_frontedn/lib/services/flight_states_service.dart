@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -6,21 +7,31 @@ import '../core/api_configuration.dart';
 import '../models/flight_states.dart';
 
 class FlightStatesService {
-  FlightStatesService({http.Client? client, ApiConfiguration? configuration})
+  FlightStatesService({
+    http.Client? client,
+    ApiConfiguration? configuration,
+    Duration requestTimeout = const Duration(seconds: 15),
+  })
     : _client = client ?? http.Client(),
       _flightStatesUri = (configuration ?? ApiConfiguration.fromEnvironment())
-          .endpoint('/api/flightStates');
+          .endpoint('/api/flightStates'),
+      _requestTimeout = requestTimeout;
 
   final http.Client _client;
   final Uri _flightStatesUri;
+  final Duration _requestTimeout;
 
   void close() => _client.close();
 
   Future<FlightStates> getFlightStates() async {
-    final response = await _client.get(
-      _flightStatesUri,
-      headers: const {'Accept': 'application/json'},
-    );
+    late http.Response response;
+    try {
+      response = await _client
+          .get(_flightStatesUri, headers: const {'Accept': 'application/json'})
+          .timeout(_requestTimeout);
+    } on TimeoutException catch (error) {
+      throw FlightStatesException('Timed out while loading flight states.', error);
+    }
 
     if (response.statusCode != 200) {
       throw FlightStatesException(

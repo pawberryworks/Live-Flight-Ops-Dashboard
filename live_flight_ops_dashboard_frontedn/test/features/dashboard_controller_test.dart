@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_flight_ops_dashboard_frontedn/features/dashboard/dashboard_controller.dart';
 import 'package:live_flight_ops_dashboard_frontedn/models/aircraft_state.dart';
@@ -42,6 +44,47 @@ void main() {
     expect(controller.state.refreshInterval, const Duration(seconds: 20));
     controller.dispose();
   });
+
+  test('ignores a stale load that completes after a newer request', () async {
+    final firstResponse = Completer<FlightStates>();
+    final secondResponse = Completer<FlightStates>();
+    final controller = DashboardController(
+      flightStatesRepository: _QueuedFlightStatesRepository([
+        firstResponse.future,
+        secondResponse.future,
+      ]),
+      geographicBoundsRepository: _GeographicBoundsRepository(),
+      refreshIntervalRepository: _RefreshIntervalRepository(),
+    );
+
+    final firstLoad = controller.load();
+    final secondLoad = controller.load();
+    secondResponse.complete(_flightStates('newer'));
+    await secondLoad;
+    firstResponse.complete(_flightStates('older'));
+    await firstLoad;
+
+    expect(controller.state.flightStates!.states.single.icao24, 'newer');
+    controller.dispose();
+  });
+
+  test('does not notify after disposal while a load is pending', () async {
+    final response = Completer<FlightStates>();
+    final controller = DashboardController(
+      flightStatesRepository: _QueuedFlightStatesRepository([response.future]),
+      geographicBoundsRepository: _GeographicBoundsRepository(),
+      refreshIntervalRepository: _RefreshIntervalRepository(),
+    );
+    var notificationCount = 0;
+    controller.addListener(() => notificationCount++);
+
+    final load = controller.load();
+    controller.dispose();
+    response.complete(_flightStates('late'));
+    await load;
+
+    expect(notificationCount, 1);
+  });
 }
 
 class _FlightStatesRepository implements FlightStatesRepository {
@@ -50,16 +93,10 @@ class _FlightStatesRepository implements FlightStatesRepository {
   final FlightStates value;
 
   @override
-  void close() {}
-
-  @override
   Future<FlightStates> getFlightStates() async => value;
 }
 
 class _GeographicBoundsRepository implements GeographicBoundsRepository {
-  @override
-  void close() {}
-
   @override
   Future<GeographicBounds> getGeographicBounds() async => const GeographicBounds(
     latitudeMin: 47,
@@ -73,15 +110,21 @@ class _RefreshIntervalRepository implements RefreshIntervalRepository {
   Duration? updatedInterval;
 
   @override
-  void close() {}
-
-  @override
   Future<Duration> getRefreshInterval() async => const Duration(seconds: 10);
 
   @override
   Future<void> updateRefreshInterval(Duration interval) async {
     updatedInterval = interval;
   }
+}
+
+class _QueuedFlightStatesRepository implements FlightStatesRepository {
+  _QueuedFlightStatesRepository(this._responses);
+
+  final List<Future<FlightStates>> _responses;
+
+  @override
+  Future<FlightStates> getFlightStates() => _responses.removeAt(0);
 }
 
 FlightStates _flightStates(String icao24) => FlightStates(

@@ -67,16 +67,24 @@ class _DashboardPageState extends State<DashboardPage> {
 
   DashboardController _createController() {
     final configuration = ApiConfiguration.fromEnvironment();
+    final flightStatesRepository = HttpFlightStatesRepository(
+      FlightStatesService(configuration: configuration),
+    );
+    final geographicBoundsRepository = HttpGeographicBoundsRepository(
+      GeographicBoundsService(configuration: configuration),
+    );
+    final refreshIntervalRepository = HttpRefreshIntervalRepository(
+      RefreshIntervalService(configuration: configuration),
+    );
     return DashboardController(
-      flightStatesRepository: HttpFlightStatesRepository(
-        FlightStatesService(configuration: configuration),
-      ),
-      geographicBoundsRepository: HttpGeographicBoundsRepository(
-        GeographicBoundsService(configuration: configuration),
-      ),
-      refreshIntervalRepository: HttpRefreshIntervalRepository(
-        RefreshIntervalService(configuration: configuration),
-      ),
+      flightStatesRepository: flightStatesRepository,
+      geographicBoundsRepository: geographicBoundsRepository,
+      refreshIntervalRepository: refreshIntervalRepository,
+      resources: [
+        flightStatesRepository,
+        geographicBoundsRepository,
+        refreshIntervalRepository,
+      ],
     );
   }
 
