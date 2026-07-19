@@ -7,8 +7,8 @@ abstract final class AppColors {
     // Brand / primary actions
     primary: Color.fromARGB(255, 216, 42, 59),
     onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color.fromARGB(255, 221, 102, 116),
-    onPrimaryContainer: Color.fromARGB(255, 216, 42, 59),
+    primaryContainer: Color.fromARGB(255, 247, 210, 213),
+    onPrimaryContainer: Color(0xFF3D0005),
 
     // Informational actions and secondary controls
     secondary: Color(0xFF1769AA),

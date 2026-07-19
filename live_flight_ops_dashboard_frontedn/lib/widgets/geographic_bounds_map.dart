@@ -236,7 +236,7 @@ class _AircraftMarkers extends StatelessWidget {
             layout: layout,
             bounds: bounds,
             selectedAircraftIcao24: scope?.selectedAircraftIcao24,
-            selectedColor: Theme.of(context).colorScheme.primaryContainer,
+            selectedColor: Theme.of(context).colorScheme.primary,
             onAircraftSelected: scope?.onAircraftSelected,
           ),
           child: const SizedBox.expand(),

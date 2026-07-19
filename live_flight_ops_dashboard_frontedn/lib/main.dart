@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_side_menu/flutter_side_menu.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'core/api_configuration.dart';
 import 'features/dashboard/dashboard_controller.dart';
@@ -9,6 +7,7 @@ import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
 import 'services/refresh_interval_service.dart';
 import 'theme/app_colors.dart';
+import 'widgets/dashboard_sidebar.dart';
 import 'widgets/flight_states_list.dart';
 import 'widgets/flight_states_table.dart';
 import 'widgets/geographic_bounds_map.dart';
@@ -99,7 +98,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       body: Row(
         children: [
-          _NavigationMenu(
+          DashboardSidebar(
             selectedPage: _selectedPage,
             onPageSelected: (page) => setState(() => _selectedPage = page),
             onToggleTheme: widget.onToggleTheme,
@@ -117,59 +116,6 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
-}
-
-class _NavigationMenu extends StatelessWidget {
-  const _NavigationMenu({
-    required this.selectedPage,
-    required this.onPageSelected,
-    required this.onToggleTheme,
-  });
-
-  final int selectedPage;
-  final ValueChanged<int> onPageSelected;
-  final VoidCallback onToggleTheme;
-
-  @override
-  Widget build(BuildContext context) => SideMenu(
-    mode: SideMenuMode.open,
-    backgroundColor: Theme.of(context).colorScheme.primary,
-    builder: (data) => SideMenuData(
-      header: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: SvgPicture.asset(
-          'assets/icons/logo-white.svg',
-          height: 80,
-          colorFilter: ColorFilter.mode(
-            Theme.of(context).colorScheme.onPrimary,
-            BlendMode.srcIn,
-          ),
-        ),
-      ),
-      items: [
-        _menuItem(0, 'Map', Icons.map),
-        _menuItem(1, 'List', Icons.list),
-        _menuItem(2, 'Settings', Icons.settings),
-      ],
-      footer: IconButton(
-        icon: Icon(
-          Theme.of(context).brightness == Brightness.light
-              ? Icons.dark_mode
-              : Icons.light_mode,
-          color: Theme.of(context).colorScheme.onPrimary,
-        ),
-        onPressed: onToggleTheme,
-      ),
-    ),
-  );
-
-  SideMenuItemDataTile _menuItem(int page, String title, IconData icon) =>
-      SideMenuItemDataTile(
-        isSelected: selectedPage == page,
-        title: title,
-        icon: Icon(icon),
-        onTap: () => onPageSelected(page),
-      );
 }
 
 class _DashboardBody extends StatelessWidget {
