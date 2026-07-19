@@ -364,17 +364,18 @@ GeographicBounds? _detailMapBoundsFor(AircraftState state) {
 
   // A 20° by 20° viewport keeps the selected aircraft at the center while
   // retaining useful geographical context in the compact details dialog.
-  const halfSpan = 10.0;
+  const halfSpanLatitude = 0.1;
+  const halfSpanLogitude = 0.4;
   const maximumMapLatitude = 85.05112878;
   final centeredLatitude = latitude.clamp(
-    -maximumMapLatitude + halfSpan,
-    maximumMapLatitude - halfSpan,
+    -maximumMapLatitude + halfSpanLogitude,
+    maximumMapLatitude - halfSpanLogitude,
   ).toDouble();
   return GeographicBounds(
-    latitudeMin: centeredLatitude - halfSpan,
-    latitudeMax: centeredLatitude + halfSpan,
-    longitudeMin: longitude - halfSpan,
-    longitudeMax: longitude + halfSpan,
+    latitudeMin: centeredLatitude - halfSpanLatitude,
+    latitudeMax: centeredLatitude + halfSpanLatitude,
+    longitudeMin: longitude - halfSpanLogitude,
+    longitudeMax: longitude + halfSpanLogitude,
   );
 }
 
