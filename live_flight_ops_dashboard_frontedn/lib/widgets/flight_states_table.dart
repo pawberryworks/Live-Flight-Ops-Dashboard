@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
+import 'geographic_bounds_map.dart';
 
 class FlightStatesTable extends StatefulWidget {
   const FlightStatesTable({
@@ -279,6 +280,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
         ? state.icao24.toUpperCase()
         : state.callSign;
     final values = _values(state);
+    final mapBounds = _detailMapBoundsFor(state);
     return showDialog<void>(
       context: context,
       builder: (context) => Dialog(
@@ -304,6 +306,27 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (mapBounds != null) ...[
+                  SizedBox(
+                    height: 220,
+                    child: AircraftMapScope(
+                      aircraft: [state],
+                      selectedAircraftIcao24: state.icao24,
+                      onAircraftSelected: (_) {},
+                      onAircraftDeselected: () {},
+                      child: GeographicBoundsMap(
+                        key: const ValueKey('flight-details-map'),
+                        bounds: mapBounds,
+                        aircraftCount: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ] else
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text('Flight position is unavailable.'),
+                  ),
                 Expanded(
                   child: ListView.separated(
                     itemCount: _detailColumns.length,
@@ -332,6 +355,28 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
       ),
     );
   }
+}
+
+GeographicBounds? _detailMapBoundsFor(AircraftState state) {
+  final latitude = state.latitude;
+  final longitude = state.longitude;
+  if (latitude == null || longitude == null) return null;
+
+  // A 20° by 20° viewport keeps the selected aircraft at the center while
+  // retaining useful geographical context in the compact details dialog.
+  const halfSpanLatitude = 0.1;
+  const halfSpanLogitude = 0.4;
+  const maximumMapLatitude = 85.05112878;
+  final centeredLatitude = latitude.clamp(
+    -maximumMapLatitude + halfSpanLogitude,
+    maximumMapLatitude - halfSpanLogitude,
+  ).toDouble();
+  return GeographicBounds(
+    latitudeMin: centeredLatitude - halfSpanLatitude,
+    latitudeMax: centeredLatitude + halfSpanLatitude,
+    longitudeMin: longitude - halfSpanLogitude,
+    longitudeMax: longitude + halfSpanLogitude,
+  );
 }
 
 class _TablePagination extends StatelessWidget {
