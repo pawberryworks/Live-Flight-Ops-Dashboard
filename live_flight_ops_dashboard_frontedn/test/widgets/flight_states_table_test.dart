@@ -29,6 +29,10 @@ void main() {
 
     expect(find.byKey(const ValueKey('flight-row-abc123')), findsOneWidget);
     expect(find.byKey(const ValueKey('flight-row-def456')), findsOneWidget);
+    expect(
+      tester.widget<DataTable>(find.byType(DataTable)).showCheckboxColumn,
+      isFalse,
+    );
 
     await tester.enterText(
       find.byKey(const ValueKey('filter-origin-country')),

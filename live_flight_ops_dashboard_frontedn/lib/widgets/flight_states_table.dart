@@ -186,6 +186,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                           ),
                           child: SingleChildScrollView(
                             child: DataTable(
+                          showCheckboxColumn: false,
                           headingRowHeight: 76,
                           columns: [
                             for (final index in _tableColumnIndexes)
