@@ -21,7 +21,9 @@ class FlightStatesTable extends StatefulWidget {
 
 class _FlightStatesTableState extends State<FlightStatesTable> {
   static const _rowsPerPage = 25;
-  static const _minimumTableWidth = 780.0;
+  static const _minimumTableWidth = 804.0;
+  static const _columnSpacing = 24.0;
+  static const _horizontalMargin = 12.0;
   static const _detailColumns = <String>[
     'ICAO24',
     'Call sign',
@@ -175,17 +177,26 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                     interactive: true,
                     scrollbarOrientation: ScrollbarOrientation.bottom,
                     child: LayoutBuilder(
-                      builder: (context, constraints) => SingleChildScrollView(
+                      builder: (context, constraints) {
+                        final tableWidth = math.max(
+                          constraints.maxWidth,
+                          _minimumTableWidth,
+                        );
+                        final columnWidth =
+                            (tableWidth - (_horizontalMargin * 2) -
+                                (_columnSpacing *
+                                    (_tableColumnIndexes.length - 1))) /
+                            _tableColumnIndexes.length;
+                        return SingleChildScrollView(
                         key: const ValueKey('flight-table-horizontal-scroll'),
                         controller: _horizontalScrollController,
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
-                          width: math.max(
-                            constraints.maxWidth,
-                            _minimumTableWidth,
-                          ),
+                          width: tableWidth,
                           child: SingleChildScrollView(
                             child: DataTable(
+                          horizontalMargin: _horizontalMargin,
+                          columnSpacing: _columnSpacing,
                           showCheckboxColumn: false,
                           headingRowHeight: 76,
                           columns: [
@@ -193,6 +204,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                               DataColumn(
                                 label: _ColumnFilter(
                                   label: _detailColumns[index],
+                                  width: columnWidth,
                                   sortAscending: _sortColumnIndex == index
                                       ? _sortAscending
                                       : null,
@@ -220,14 +232,20 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                                 onSelectChanged: (_) => _showFlightDetails(state),
                                 cells: [
                                   for (final index in _tableColumnIndexes)
-                                    DataCell(Text(_values(state)[index])),
+                                    DataCell(
+                                      SizedBox(
+                                        width: columnWidth,
+                                        child: Text(_values(state)[index]),
+                                      ),
+                                    ),
                                 ],
                               ),
                           ],
                             ),
                           ),
                         ),
-                      ),
+                        );
+                      },
                     ),
                 ),
           ),
@@ -368,12 +386,14 @@ class _TablePagination extends StatelessWidget {
 class _ColumnFilter extends StatelessWidget {
   const _ColumnFilter({
     required this.label,
+    required this.width,
     required this.sortAscending,
     required this.onSortRequested,
     required this.onChanged,
   });
 
   final String label;
+  final double width;
   final bool? sortAscending;
   final ValueChanged<bool> onSortRequested;
   final ValueChanged<String> onChanged;
@@ -381,7 +401,7 @@ class _ColumnFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 110,
+      width: width,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,

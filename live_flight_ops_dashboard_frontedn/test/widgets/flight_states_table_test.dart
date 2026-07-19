@@ -141,6 +141,26 @@ void main() {
     expect(scrollView.controller!.offset, greaterThan(0));
   });
 
+  testWidgets('stretches visible columns across a wide table viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesTable(
+            bounds: bounds,
+            states: [_aircraft('abc123', 'DLH123', 'Germany')],
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(DataTable)).width, greaterThan(1100));
+  });
+
   testWidgets('sorts each data column in ascending and descending order', (
     tester,
   ) async {
