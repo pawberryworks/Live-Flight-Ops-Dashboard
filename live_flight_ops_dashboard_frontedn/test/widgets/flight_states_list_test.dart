@@ -37,6 +37,63 @@ void main() {
     expect(find.text('No flights are currently tracked.'), findsOneWidget);
   });
 
+  testWidgets('filters tracked flights by call sign and country', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesList(
+            states: [
+              _aircraft(callSign: 'DLH123', originCountry: 'Germany'),
+              _aircraft(
+                icao24: 'def456',
+                callSign: 'BAW456',
+                originCountry: 'United Kingdom',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('tracked-flights-search')),
+      'gErMaNy',
+    );
+    await tester.pump();
+
+    expect(find.text('DLH123'), findsOneWidget);
+    expect(find.text('BAW456'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('tracked-flights-search')),
+      'baw',
+    );
+    await tester.pump();
+
+    expect(find.text('DLH123'), findsNothing);
+    expect(find.text('BAW456'), findsOneWidget);
+  });
+
+  testWidgets('shows a no-results message for an unmatched search', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesList(
+            states: [_aircraft(callSign: 'DLH123', originCountry: 'Germany')],
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('tracked-flights-search')),
+      'Brazil',
+    );
+    await tester.pump();
+
+    expect(find.text('No flights match your search.'), findsOneWidget);
+  });
+
   testWidgets('marks the flight selected on the map', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
