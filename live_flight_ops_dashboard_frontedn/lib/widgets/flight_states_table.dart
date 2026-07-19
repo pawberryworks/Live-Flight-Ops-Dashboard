@@ -217,7 +217,6 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                         ),
                       ),
                     ),
-                  ),
                 ),
           ),
           if (widget.states.isNotEmpty && filteredStates.isEmpty)
