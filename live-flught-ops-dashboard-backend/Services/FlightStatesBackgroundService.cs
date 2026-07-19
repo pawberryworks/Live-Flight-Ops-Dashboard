@@ -12,21 +12,21 @@ public sealed class FlightStatesBackgroundService : BackgroundService
     private const string HttpClientName = "OpenSky";
     private const string FlightStatesPath = "states/all";
 
-    private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<FlightStatesBackgroundService> _logger;
     private readonly IMemoryCache _memoryCache;
+    private readonly RuntimeFlightSettings _settings;
 
     public FlightStatesBackgroundService(
-        IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
         ILogger<FlightStatesBackgroundService> logger,
-        IMemoryCache memoryCache)
+        IMemoryCache memoryCache,
+        RuntimeFlightSettings settings)
     {
-        _configuration = configuration;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _memoryCache = memoryCache;
+        _settings = settings;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -58,7 +58,7 @@ public sealed class FlightStatesBackgroundService : BackgroundService
             }
 
             _logger.LogInformation("Fetched flight states from the external API with count {Count}.",
-                flightStates.States.Count());
+                flightStates.States?.Count ?? 0);
 
             _memoryCache.Set(FlightStatesCacheKey, flightStates);
 
@@ -70,6 +70,10 @@ public sealed class FlightStatesBackgroundService : BackgroundService
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
             // The application is shutting down.
+        }
+        catch (OperationCanceledException exception)
+        {
+            _logger.LogError(exception, "The flight states request timed out.");
         }
         catch (HttpRequestException exception)
         {
@@ -84,35 +88,21 @@ public sealed class FlightStatesBackgroundService : BackgroundService
     private TimeSpan GetRefreshInterval()
     {
         var refreshIntervalInSeconds =
-            _configuration.GetValue<int>("OpenSkyConfig:RefreshIntervalInSeconds");
-
-        if (refreshIntervalInSeconds <= 0)
-        {
-            throw new InvalidOperationException(
-                "OpenSkyConfig:RefreshIntervalInSeconds must be greater than zero.");
-        }
+            _settings.GetRefreshIntervalInSeconds();
 
         return TimeSpan.FromSeconds(refreshIntervalInSeconds);
     }
 
-    private String FlightStatesPathWithParameters() {
-        return $"{FlightStatesPath}?{GetParametersOfLatitudesAndLongitutes()}";
+    private string FlightStatesPathWithParameters()
+    {
+        return $"{FlightStatesPath}?{GetParametersOfLatitudesAndLongitudes()}";
     }
 
-    private String GetParametersOfLatitudesAndLongitutes()
+    private string GetParametersOfLatitudesAndLongitudes()
     {
-        var minimalLatitude =
-            _configuration.GetValue<float>("OpenSkyConfig:LatitudeMin");
+        var bounds = _settings.GetBounds();
 
-        var minimalLongitude =
-            _configuration.GetValue<float>("OpenSkyConfig:LongitudeMin");
-
-        var maximalLatitude =
-            _configuration.GetValue<float>("OpenSkyConfig:LatitudeMax");
-
-        var maximalLongitude =
-            _configuration.GetValue<float>("OpenSkyConfig:LongitudeMax");
-
-        return $"lamin={minimalLatitude}&lomin={minimalLongitude}&lamax={maximalLatitude}&lomax={maximalLongitude}";
+        return FormattableString.Invariant(
+            $"lamin={bounds.LatitudeMin}&lomin={bounds.LongitudeMin}&lamax={bounds.LatitudeMax}&lomax={bounds.LongitudeMax}");
     }
 }

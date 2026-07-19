@@ -1,4 +1,6 @@
+using LiveFlightOpsDashboardBackend.Configuration;
 using LiveFlightOpsDashboardBackend.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,13 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddMemoryCache();
+builder.Services.AddHealthChecks();
+builder.Services
+    .AddOptions<OpenSkyOptions>()
+    .Bind(builder.Configuration.GetSection(OpenSkyOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<OpenSkyOptions>, OpenSkyOptionsValidator>();
+builder.Services.AddSingleton<RuntimeFlightSettings>();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -25,11 +34,10 @@ if (builder.Environment.IsDevelopment())
 
 builder.Services.AddHttpClient("OpenSky", (serviceProvider, client) =>
 {
-    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-    var apiUrl = configuration["OpenSkyConfig:ApiUrl"]
-        ?? throw new InvalidOperationException("OpenSkyConfig:ApiUrl is not configured.");
+    var options = serviceProvider.GetRequiredService<IOptions<OpenSkyOptions>>().Value;
 
-    client.BaseAddress = new Uri($"{apiUrl.TrimEnd('/')}/");
+    client.BaseAddress = new Uri($"{options.ApiUrl.TrimEnd('/')}/");
+    client.Timeout = TimeSpan.FromSeconds(15);
 });
 
 // Add services to the container.
@@ -53,5 +61,6 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
