@@ -90,6 +90,39 @@ void main() {
     expect(scope.aircraft.single.icao24, 'abc123');
   });
 
+  testWidgets('shows flight timestamps in the user local timezone', (
+    tester,
+  ) async {
+    const timePosition = 1784465459;
+    const lastContact = 1784465460;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesTable(
+            bounds: bounds,
+            states: [
+              _aircraft(
+                'abc123',
+                'DLH123',
+                'Germany',
+                timePosition: timePosition,
+                lastContact: lastContact,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('flight-row-abc123')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_localTimestamp(timePosition)), findsOneWidget);
+    expect(find.text(_localTimestamp(lastContact)), findsOneWidget);
+    expect(find.text(timePosition.toString()), findsNothing);
+    expect(find.text(lastContact.toString()), findsNothing);
+  });
+
   testWidgets('only builds the current page of a large flight list', (
     tester,
   ) async {
@@ -261,13 +294,15 @@ AircraftState _aircraft(
   String callSign,
   String country, {
   double longitude = 13.4,
+  int? timePosition,
+  int? lastContact,
 }) {
   return AircraftState(
     icao24: icao24,
     callSign: callSign,
     originCountry: country,
-    timePosition: null,
-    lastContact: null,
+    timePosition: timePosition,
+    lastContact: lastContact,
     longitude: longitude,
     latitude: 52.5,
     barometricAltitude: 10000,
@@ -282,4 +317,17 @@ AircraftState _aircraft(
     positionSource: 0,
     category: 0,
   );
+}
+
+String _localTimestamp(int secondsSinceEpoch) {
+  final localTime = DateTime.fromMillisecondsSinceEpoch(
+    secondsSinceEpoch * Duration.millisecondsPerSecond,
+    isUtc: true,
+  ).toLocal();
+  return '${localTime.year.toString().padLeft(4, '0')}-'
+      '${localTime.month.toString().padLeft(2, '0')}-'
+      '${localTime.day.toString().padLeft(2, '0')} '
+      '${localTime.hour.toString().padLeft(2, '0')}:'
+      '${localTime.minute.toString().padLeft(2, '0')}:'
+      '${localTime.second.toString().padLeft(2, '0')}';
 }

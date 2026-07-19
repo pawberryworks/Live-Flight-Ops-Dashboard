@@ -63,8 +63,8 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     state.icao24.toUpperCase(),
     state.callSign,
     state.originCountry,
-    _integer(state.timePosition),
-    _integer(state.lastContact),
+    _timestamp(state.timePosition),
+    _timestamp(state.lastContact),
     _number(state.latitude, suffix: '°'),
     _number(state.longitude, suffix: '°'),
     _number(state.barometricAltitude, suffix: ' m'),
@@ -526,7 +526,21 @@ String _number(double? value, {required String suffix}) {
   return '${value.toStringAsFixed(1)}$suffix';
 }
 
-String _integer(int? value) => value?.toString() ?? '—';
+String _timestamp(int? secondsSinceEpoch) {
+  if (secondsSinceEpoch == null) return '—';
+
+  final localTime = DateTime.fromMillisecondsSinceEpoch(
+    secondsSinceEpoch * Duration.millisecondsPerSecond,
+    isUtc: true,
+  ).toLocal();
+  final year = localTime.year.toString().padLeft(4, '0');
+  final month = localTime.month.toString().padLeft(2, '0');
+  final day = localTime.day.toString().padLeft(2, '0');
+  final hour = localTime.hour.toString().padLeft(2, '0');
+  final minute = localTime.minute.toString().padLeft(2, '0');
+  final second = localTime.second.toString().padLeft(2, '0');
+  return '$year-$month-$day $hour:$minute:$second';
+}
 
 int _compareSortValues(Object? left, Object? right) {
   if (identical(left, right)) return 0;
