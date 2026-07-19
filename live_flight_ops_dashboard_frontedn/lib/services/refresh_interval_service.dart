@@ -1,25 +1,44 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-class RefreshIntervalService {
-  RefreshIntervalService({http.Client? client})
-    : _client = client ?? http.Client();
+import '../core/api_configuration.dart';
 
-  static final Uri _refreshIntervalUri = Uri.https(
-    'localhost:7002',
-    '/api/refreshInterval',
-  );
+class RefreshIntervalService {
+  RefreshIntervalService({
+    http.Client? client,
+    ApiConfiguration? configuration,
+    Duration requestTimeout = const Duration(seconds: 15),
+  })
+    : _client = client ?? http.Client(),
+      _refreshIntervalUri =
+          (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
+            '/api/refreshInterval',
+          ),
+      _requestTimeout = requestTimeout;
 
   final http.Client _client;
+  final Uri _refreshIntervalUri;
+  final Duration _requestTimeout;
 
   void close() => _client.close();
 
   Future<Duration> getRefreshInterval() async {
-    final response = await _client.get(
-      _refreshIntervalUri,
-      headers: const {'Accept': 'application/json'},
-    );
+    late http.Response response;
+    try {
+      response = await _client
+          .get(
+            _refreshIntervalUri,
+            headers: const {'Accept': 'application/json'},
+          )
+          .timeout(_requestTimeout);
+    } on TimeoutException catch (error) {
+      throw RefreshIntervalException(
+        'Timed out while loading the refresh interval.',
+        error,
+      );
+    }
 
     if (response.statusCode != 200) {
       throw RefreshIntervalException(
@@ -54,10 +73,22 @@ class RefreshIntervalService {
       );
     }
 
-    final response = await _client.put(
-      _refreshIntervalUri.replace(path: '${_refreshIntervalUri.path}/$seconds'),
-      headers: const {'Accept': 'application/json'},
-    );
+    late http.Response response;
+    try {
+      response = await _client
+          .put(
+            _refreshIntervalUri.replace(
+              path: '${_refreshIntervalUri.path}/$seconds',
+            ),
+            headers: const {'Accept': 'application/json'},
+          )
+          .timeout(_requestTimeout);
+    } on TimeoutException catch (error) {
+      throw RefreshIntervalException(
+        'Timed out while updating the refresh interval.',
+        error,
+      );
+    }
 
     if (response.statusCode != 204) {
       throw RefreshIntervalException(

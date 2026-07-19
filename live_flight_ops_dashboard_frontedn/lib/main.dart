@@ -1,11 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_side_menu/flutter_side_menu.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-import 'models/flight_states.dart';
-import 'models/geographic_bounds.dart';
+import 'core/api_configuration.dart';
+import 'features/dashboard/dashboard_controller.dart';
+import 'repositories/http_dashboard_repositories.dart';
 import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
 import 'services/refresh_interval_service.dart';
@@ -15,9 +14,7 @@ import 'widgets/flight_states_table.dart';
 import 'widgets/geographic_bounds_map.dart';
 import 'widgets/settings_view.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+void main() => runApp(const MainApp());
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -28,23 +25,17 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   ThemeMode _themeMode = ThemeMode.light;
-  late final ThemeData _lightTheme = ThemeData(colorScheme: AppColors.light);
-  late final ThemeData _darkTheme = ThemeData(colorScheme: AppColors.dark);
 
-  void _toggleTheme() {
-    setState(() {
-      _themeMode = _themeMode == ThemeMode.light
-          ? ThemeMode.dark
-          : ThemeMode.light;
-    });
-  }
+  void _toggleTheme() => setState(() {
+    _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Live Flight Ops Dashboard',
-      theme: _lightTheme,
-      darkTheme: _darkTheme,
+      theme: ThemeData(colorScheme: AppColors.light),
+      darkTheme: ThemeData(colorScheme: AppColors.dark),
       themeMode: _themeMode,
       home: DashboardPage(onToggleTheme: _toggleTheme),
     );
@@ -52,126 +43,54 @@ class _MainAppState extends State<MainApp> {
 }
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({required this.onToggleTheme, super.key});
+  const DashboardPage({required this.onToggleTheme, this.controller, super.key});
 
   final VoidCallback onToggleTheme;
+  final DashboardController? controller;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final GeographicBoundsService _geographicBoundsService =
-      GeographicBoundsService();
-  final FlightStatesService _flightStatesService = FlightStatesService();
-  RefreshIntervalService? _refreshIntervalServiceInstance;
-  late Future<_DashboardData> _dashboardData;
-  Timer? _flightStatesRefreshTimer;
-  GeographicBounds? _bounds;
-  Duration? _refreshInterval;
-  // Keep newly added state nullable and lazily initialized so hot reload can
-  // migrate dashboard State objects that were created before these fields
-  // existed.
-  bool? _flightStatesRequestInProgress;
-  ValueNotifier<FlightStates?>? _flightStatesNotifier;
-  String? _selectedAircraftIcao24;
-  // This field must remain nullable so an existing State object created before
-  // the List page was added can survive a hot reload. New fields are injected
-  // as null into an already mounted State object on Flutter web.
-  int? _selectedPage;
-
-  int get _currentPage => _selectedPage ?? 0;
-
-  ValueNotifier<FlightStates?> get _flightStates =>
-      _flightStatesNotifier ??= ValueNotifier(null);
-  RefreshIntervalService get _refreshIntervalService =>
-      _refreshIntervalServiceInstance ??= RefreshIntervalService();
+  late final DashboardController _controller;
+  late final bool _ownsController;
+  var _selectedPage = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadDashboardData();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? _createController();
+    _controller.load();
   }
 
-  void _loadDashboardData() {
-    _flightStatesRefreshTimer?.cancel();
-    _dashboardData = _initializeDashboardData();
-  }
-
-  Future<_DashboardData> _initializeDashboardData() async {
-    final refreshInterval = await _refreshIntervalService.getRefreshInterval();
-    final results = await Future.wait([
-      _geographicBoundsService.getGeographicBounds(),
-      _flightStatesService.getFlightStates(),
-    ]);
-    _bounds = results[0] as GeographicBounds;
-    _flightStates.value = results[1] as FlightStates;
-    if (mounted) {
-      _startFlightStatesRefreshTimer(refreshInterval);
-    }
-    return _DashboardData(
-      bounds: _bounds!,
-      flightStates: results[1] as FlightStates,
-      refreshInterval: refreshInterval,
+  DashboardController _createController() {
+    final configuration = ApiConfiguration.fromEnvironment();
+    final flightStatesRepository = HttpFlightStatesRepository(
+      FlightStatesService(configuration: configuration),
     );
-  }
-
-  void _startFlightStatesRefreshTimer(Duration refreshInterval) {
-    _refreshInterval = refreshInterval;
-    _flightStatesRefreshTimer?.cancel();
-    _flightStatesRefreshTimer = Timer.periodic(
-      refreshInterval,
-      (_) => unawaited(_refreshFlightStates()),
+    final geographicBoundsRepository = HttpGeographicBoundsRepository(
+      GeographicBoundsService(configuration: configuration),
     );
-  }
-
-  void _updateRefreshInterval(Duration refreshInterval) {
-    if (!mounted) return;
-    setState(() => _startFlightStatesRefreshTimer(refreshInterval));
-  }
-
-  Future<void> _refreshFlightStates() async {
-    final bounds = _bounds;
-    if (!mounted ||
-        bounds == null ||
-        _flightStatesRequestInProgress == true) {
-      return;
-    }
-
-    _flightStatesRequestInProgress = true;
-    try {
-      final flightStates = await _flightStatesService.getFlightStates();
-      if (!mounted) {
-        return;
-      }
-
-      _flightStates.value = flightStates;
-    } on FlightStatesException {
-      // Keep the last successful response visible and retry on the next tick.
-    } finally {
-      _flightStatesRequestInProgress = false;
-    }
-  }
-
-  void _retry() {
-    setState(_loadDashboardData);
-  }
-
-  void _selectAircraft(String icao24) {
-    setState(() => _selectedAircraftIcao24 = icao24);
-  }
-
-  void _clearAircraftSelection() {
-    setState(() => _selectedAircraftIcao24 = null);
+    final refreshIntervalRepository = HttpRefreshIntervalRepository(
+      RefreshIntervalService(configuration: configuration),
+    );
+    return DashboardController(
+      flightStatesRepository: flightStatesRepository,
+      geographicBoundsRepository: geographicBoundsRepository,
+      refreshIntervalRepository: refreshIntervalRepository,
+      resources: [
+        flightStatesRepository,
+        geographicBoundsRepository,
+        refreshIntervalRepository,
+      ],
+    );
   }
 
   @override
   void dispose() {
-    _flightStatesRefreshTimer?.cancel();
-    _geographicBoundsService.close();
-    _flightStatesService.close();
-    _refreshIntervalServiceInstance?.close();
-    _flightStatesNotifier?.dispose();
+    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 
@@ -179,270 +98,151 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Row(
-          children: [
-            SideMenu(
-              mode: SideMenuMode.open,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              builder: (data) {
-                return SideMenuData(
-                  defaultTileData: SideMenuItemTileDefaults(
-                    highlightSelectedColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                    titleStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary, 
-                    ),
-                    selectedTitleStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary, 
-                    ),
-                    hoverColor: Theme.of(context).colorScheme.surfaceTint,
-
-                  ),
-                  animItems: SideMenuItemsAnimationData(),
-                  header: Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
-                    child: SvgPicture.asset(
-                      'assets/icons/logo-white.svg',
-                      height: 80,
-                      colorFilter: ColorFilter.mode(
-                          Theme.of(context).colorScheme.onPrimary,
-                        BlendMode.srcIn,
-                        ),
-                      ),
-                  ),
-                  items: [
-                    SideMenuItemDataTile(
-                      isSelected: _currentPage == 0,
-                      title: 'Map',
-                      onTap: () => setState(() => _selectedPage = 0),
-                      icon: const Icon(Icons.map),
-                    ),
-                    SideMenuItemDataTile(
-                      isSelected: _currentPage == 1,
-                      title: 'List',
-                      onTap: () => setState(() => _selectedPage = 1),
-                      icon: const Icon(Icons.list),
-                    ),
-                    SideMenuItemDataTile(
-                      isSelected: _currentPage == 2,
-                      title: 'Settings',
-                      onTap: () => setState(() => _selectedPage = 2),
-                      icon: const Icon(Icons.settings),
-                    ),
-                  ],
-                  footer: IconButton(
-                    icon: Icon(
-                      Theme.of(context).brightness == Brightness.light
-                          ? Icons.dark_mode
-                          : Icons.light_mode,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      size: 32,
-                    ),
-                    onPressed: widget.onToggleTheme,
-                  )
-                );
-              },
-            ),
-            Expanded(
-              child: FutureBuilder<_DashboardData>(
-                future: _dashboardData,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Unable to load dashboard data.'),
-                          const SizedBox(height: 12),
-                          FilledButton.icon(
-                            onPressed: _retry,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final data = snapshot.requireData;
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: IndexedStack(
-                      index: _currentPage,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Semantics(
-                                label:
-                                    'Map of the configured geographic bounds',
-                                child: ValueListenableBuilder<FlightStates?>(
-                                  valueListenable: _flightStates,
-                                  child: GeographicBoundsMap(
-                                    bounds: data.bounds,
-                                    aircraftCount:
-                                        data.flightStates.states.length,
-                                  ),
-                                  builder: (context, flightStates, map) {
-                                    return AircraftMapScope(
-                                      aircraft:
-                                          flightStates?.states ?? const [],
-                                      selectedAircraftIcao24:
-                                          _selectedAircraftIcao24,
-                                      onAircraftSelected: _selectAircraft,
-                                      onAircraftDeselected:
-                                          _clearAircraftSelection,
-                                      child: map!,
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: ValueListenableBuilder<FlightStates?>(
-                                valueListenable: _flightStates,
-                                builder: (context, flightStates, _) {
-                                  return FlightStatesList(
-                                    states:
-                                        flightStates?.states ?? const [],
-                                    selectedAircraftIcao24:
-                                        _selectedAircraftIcao24,
-                                    onAircraftSelected: _selectAircraft,
-                                    onAircraftDeselected:
-                                        _clearAircraftSelection,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        ValueListenableBuilder<FlightStates?>(
-                            valueListenable: _flightStates,
-                            builder: (context, flightStates, _) {
-                              return FlightStatesTable(
-                                states: flightStates?.states ?? const [],
-                                bounds: data.bounds,
-                              );
-                            },
-                          ),
-                        SettingsView(
-                          refreshInterval:
-                              _refreshInterval ?? data.refreshInterval,
-                          refreshIntervalService: _refreshIntervalService,
-                          onRefreshIntervalUpdated: _updateRefreshInterval,
-                        ),
-                      ],
-                    ),
-                  );
-                },
+        children: [
+          _NavigationMenu(
+            selectedPage: _selectedPage,
+            onPageSelected: (page) => setState(() => _selectedPage = page),
+            onToggleTheme: widget.onToggleTheme,
+          ),
+          Expanded(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => _DashboardBody(
+                controller: _controller,
+                selectedPage: _selectedPage,
               ),
             ),
-          ]
-      )
+          ),
+        ],
+      ),
     );
-      // appBar: AppBar(
-      //   title: Align(
-      //     alignment: Alignment.centerLeft,
-      //     child: Padding(
-      //       padding: const EdgeInsets.only(left: 16.0),
-      //       child: SvgPicture.asset(
-      //         'assets/icons/logo-white.svg',
-      //         height: 80,
-      //         colorFilter: ColorFilter.mode(
-      //           Theme.of(context).colorScheme.onPrimary,
-      //           BlendMode.srcIn,
-      //         ),
-      //       ),
-      //     )
-      //   ),
-      //   actions: [
-      //     IconButton(
-      //       icon: Icon(
-      //         Theme.of(context).brightness == Brightness.light
-      //             ? Icons.dark_mode
-      //             : Icons.light_mode,
-      //         color: Theme.of(context).colorScheme.onPrimary,
-      //         size: 32,
-      //       ),
-      //       onPressed: onToggleTheme,
-      //     ),
-      //   ],
-      //   actionsPadding: const EdgeInsets.only(right: 32.0),
-      //   backgroundColor: Theme.of(context).colorScheme.primary,
-      //   toolbarHeight: 112,
-      // ),
-      // body: Center(
-      //   child: Text(
-      //     'Hello World!',
-      //     style: TextStyle(
-      //       color: Theme.of(context).colorScheme.onSurface,
-      //       fontSize: 24,
-      //     ),
-      //   ),
-      // ),
   }
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: Align(
-  //         alignment: Alignment.centerLeft,
-  //         child: Padding(
-  //           padding: const EdgeInsets.only(left: 16.0),
-  //           child: SvgPicture.asset(
-  //             'assets/icons/logo-white.svg',
-  //             height: 80,
-  //             colorFilter: ColorFilter.mode(
-  //               Theme.of(context).colorScheme.onPrimary,
-  //               BlendMode.srcIn,
-  //             ),
-  //           ),
-  //         )
-  //       ),
-  //       actions: [
-  //         IconButton(
-  //           icon: Icon(
-  //             Theme.of(context).brightness == Brightness.light
-  //                 ? Icons.dark_mode
-  //                 : Icons.light_mode,
-  //             color: Theme.of(context).colorScheme.onPrimary,
-  //             size: 32,
-  //           ),
-  //           onPressed: onToggleTheme,
-  //         ),
-  //       ],
-  //       actionsPadding: const EdgeInsets.only(right: 32.0),
-  //       backgroundColor: Theme.of(context).colorScheme.primary,
-  //       toolbarHeight: 112,
-  //     ),
-  //     body: Center(
-  //       child: Text(
-  //         'Hello World!',
-  //         style: TextStyle(
-  //           color: Theme.of(context).colorScheme.onSurface,
-  //           fontSize: 24,
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 }
 
-class _DashboardData {
-  const _DashboardData({
-    required this.bounds,
-    required this.flightStates,
-    required this.refreshInterval,
+class _NavigationMenu extends StatelessWidget {
+  const _NavigationMenu({
+    required this.selectedPage,
+    required this.onPageSelected,
+    required this.onToggleTheme,
   });
 
-  final GeographicBounds bounds;
-  final FlightStates flightStates;
-  // Nullable for Flutter web hot reload: instances created before this field
-  // was added receive null until dashboard data is loaded again.
-  final Duration? refreshInterval;
+  final int selectedPage;
+  final ValueChanged<int> onPageSelected;
+  final VoidCallback onToggleTheme;
+
+  @override
+  Widget build(BuildContext context) => SideMenu(
+    mode: SideMenuMode.open,
+    backgroundColor: Theme.of(context).colorScheme.primary,
+    builder: (data) => SideMenuData(
+      header: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: SvgPicture.asset(
+          'assets/icons/logo-white.svg',
+          height: 80,
+          colorFilter: ColorFilter.mode(
+            Theme.of(context).colorScheme.onPrimary,
+            BlendMode.srcIn,
+          ),
+        ),
+      ),
+      items: [
+        _menuItem(0, 'Map', Icons.map),
+        _menuItem(1, 'List', Icons.list),
+        _menuItem(2, 'Settings', Icons.settings),
+      ],
+      footer: IconButton(
+        icon: Icon(
+          Theme.of(context).brightness == Brightness.light
+              ? Icons.dark_mode
+              : Icons.light_mode,
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
+        onPressed: onToggleTheme,
+      ),
+    ),
+  );
+
+  SideMenuItemDataTile _menuItem(int page, String title, IconData icon) =>
+      SideMenuItemDataTile(
+        isSelected: selectedPage == page,
+        title: title,
+        icon: Icon(icon),
+        onTap: () => onPageSelected(page),
+      );
+}
+
+class _DashboardBody extends StatelessWidget {
+  const _DashboardBody({required this.controller, required this.selectedPage});
+
+  final DashboardController controller;
+  final int selectedPage;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = controller.state;
+    if (state.isLoading) return const Center(child: CircularProgressIndicator());
+    if (!state.isReady) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Unable to load dashboard data.'),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: controller.load,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final bounds = state.bounds!;
+    final flightStates = state.flightStates!;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: IndexedStack(
+        index: selectedPage,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Semantics(
+                  label: 'Map of the configured geographic bounds',
+                  child: AircraftMapScope(
+                    aircraft: flightStates.states,
+                    selectedAircraftIcao24: state.selectedAircraftIcao24,
+                    onAircraftSelected: controller.selectAircraft,
+                    onAircraftDeselected: controller.clearAircraftSelection,
+                    child: GeographicBoundsMap(
+                      bounds: bounds,
+                      aircraftCount: flightStates.states.length,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: FlightStatesList(
+                  states: flightStates.states,
+                  selectedAircraftIcao24: state.selectedAircraftIcao24,
+                  onAircraftSelected: controller.selectAircraft,
+                  onAircraftDeselected: controller.clearAircraftSelection,
+                ),
+              ),
+            ],
+          ),
+          FlightStatesTable(states: flightStates.states, bounds: bounds),
+          SettingsView(
+            refreshInterval: state.refreshInterval!,
+            onRefreshIntervalUpdated: controller.updateRefreshInterval,
+          ),
+        ],
+      ),
+    );
+  }
 }

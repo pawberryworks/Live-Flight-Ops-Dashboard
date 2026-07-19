@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -79,5 +81,24 @@ void main() {
     );
 
     expect(service.getFlightStates(), throwsA(isA<FlightStatesException>()));
+  });
+
+  test('reports a request timeout', () async {
+    final response = Completer<http.Response>();
+    final service = FlightStatesService(
+      client: MockClient((_) => response.future),
+      requestTimeout: Duration.zero,
+    );
+
+    expect(
+      service.getFlightStates(),
+      throwsA(
+        isA<FlightStatesException>().having(
+          (error) => error.message,
+          'message',
+          contains('Timed out'),
+        ),
+      ),
+    );
   });
 }

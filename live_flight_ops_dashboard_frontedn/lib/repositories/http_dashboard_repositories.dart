@@ -1,0 +1,49 @@
+import '../models/flight_states.dart';
+import '../models/geographic_bounds.dart';
+import '../services/flight_states_service.dart';
+import '../services/geographic_bounds_service.dart';
+import '../services/refresh_interval_service.dart';
+import 'dashboard_repositories.dart';
+
+class HttpFlightStatesRepository implements FlightStatesRepository, Disposable {
+  HttpFlightStatesRepository(this._service);
+
+  final FlightStatesService _service;
+
+  @override
+  Future<FlightStates> getFlightStates() => _service.getFlightStates();
+
+  @override
+  void dispose() => _service.close();
+}
+
+class HttpGeographicBoundsRepository
+    implements GeographicBoundsRepository, Disposable {
+  HttpGeographicBoundsRepository(this._service);
+
+  final GeographicBoundsService _service;
+
+  @override
+  Future<GeographicBounds> getGeographicBounds() =>
+      _service.getGeographicBounds();
+
+  @override
+  void dispose() => _service.close();
+}
+
+class HttpRefreshIntervalRepository
+    implements RefreshIntervalRepository, Disposable {
+  HttpRefreshIntervalRepository(this._service);
+
+  final RefreshIntervalService _service;
+
+  @override
+  Future<Duration> getRefreshInterval() => _service.getRefreshInterval();
+
+  @override
+  Future<void> updateRefreshInterval(Duration interval) =>
+      _service.updateRefreshInterval(interval);
+
+  @override
+  void dispose() => _service.close();
+}
