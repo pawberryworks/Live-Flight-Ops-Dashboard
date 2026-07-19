@@ -42,9 +42,16 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
   ];
 
   final Map<int, String> _filters = {};
+  final ScrollController _horizontalScrollController = ScrollController();
   int _page = 0;
   int? _sortColumnIndex;
   bool _sortAscending = true;
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
 
   List<String> _values(AircraftState state) => [
     state.icao24.toUpperCase(),
@@ -157,58 +164,69 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
           Expanded(
             child: widget.states.isEmpty
                 ? const Center(child: Text('No flights are currently tracked.'))
-                : SingleChildScrollView(
+                : Scrollbar(
+                    key: const ValueKey('flight-table-horizontal-scrollbar'),
+                    controller: _horizontalScrollController,
+                    thumbVisibility: true,
+                    trackVisibility: true,
+                    interactive: true,
+                    scrollbarOrientation: ScrollbarOrientation.bottom,
                     child: SingleChildScrollView(
+                      key: const ValueKey('flight-table-horizontal-scroll'),
+                      controller: _horizontalScrollController,
                       scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        headingRowHeight: 76,
-                        columns: [
-                          for (var index = 0; index < _columns.length; index++)
-                            DataColumn(
-                              label: _ColumnFilter(
-                                label: _columns[index],
-                                sortAscending: _sortColumnIndex == index
-                                    ? _sortAscending
-                                    : null,
-                                onSortRequested: (ascending) => setState(() {
-                                  _sortColumnIndex = index;
-                                  _sortAscending = ascending;
-                                  _page = 0;
-                                }),
-                                onChanged: (value) => setState(() {
-                                  _page = 0;
-                                  final filter = value.trim().toLowerCase();
-                                  if (filter.isEmpty) {
-                                    _filters.remove(index);
-                                  } else {
-                                    _filters[index] = filter;
-                                  }
-                                }),
-                              ),
-                            ),
-                          const DataColumn(label: Text('Map')),
-                        ],
-                        rows: [
-                          for (final state in pageStates)
-                            DataRow(
-                              key: ValueKey('flight-row-${state.icao24}'),
-                              cells: [
-                                for (final value in _values(state))
-                                  DataCell(Text(value)),
-                                DataCell(
-                                  IconButton(
-                                    key: ValueKey('show-map-${state.icao24}'),
-                                    tooltip: 'Show flight on map',
-                                    icon: const Icon(Icons.map_outlined),
-                                    onPressed: () => _showFlightMap(state),
-                                  ),
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          headingRowHeight: 76,
+                          columns: [
+                            for (var index = 0; index < _columns.length; index++)
+                              DataColumn(
+                                label: _ColumnFilter(
+                                  label: _columns[index],
+                                  sortAscending: _sortColumnIndex == index
+                                      ? _sortAscending
+                                      : null,
+                                  onSortRequested: (ascending) => setState(() {
+                                    _sortColumnIndex = index;
+                                    _sortAscending = ascending;
+                                    _page = 0;
+                                  }),
+                                  onChanged: (value) => setState(() {
+                                    _page = 0;
+                                    final filter = value.trim().toLowerCase();
+                                    if (filter.isEmpty) {
+                                      _filters.remove(index);
+                                    } else {
+                                      _filters[index] = filter;
+                                    }
+                                  }),
                                 ),
-                              ],
-                            ),
-                        ],
+                              ),
+                            const DataColumn(label: Text('Map')),
+                          ],
+                          rows: [
+                            for (final state in pageStates)
+                              DataRow(
+                                key: ValueKey('flight-row-${state.icao24}'),
+                                cells: [
+                                  for (final value in _values(state))
+                                    DataCell(Text(value)),
+                                  DataCell(
+                                    IconButton(
+                                      key: ValueKey('show-map-${state.icao24}'),
+                                      tooltip: 'Show flight on map',
+                                      icon: const Icon(Icons.map_outlined),
+                                      onPressed: () => _showFlightMap(state),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                ),
           ),
           if (widget.states.isNotEmpty && filteredStates.isEmpty)
             const Padding(

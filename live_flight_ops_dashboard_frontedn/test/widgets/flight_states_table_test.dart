@@ -99,6 +99,43 @@ void main() {
     expect(find.text('26–30 of 30'), findsOneWidget);
   });
 
+  testWidgets('supports horizontal scrolling through all columns', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 600,
+            child: FlightStatesTable(
+              bounds: bounds,
+              states: [_aircraft('abc123', 'DLH123', 'Germany')],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final scrollbar = tester.widget<Scrollbar>(
+      find.byKey(const ValueKey('flight-table-horizontal-scrollbar')),
+    );
+    expect(scrollbar.thumbVisibility, isTrue);
+    expect(scrollbar.trackVisibility, isTrue);
+    expect(scrollbar.interactive, isTrue);
+
+    final scrollFinder = find.byKey(
+      const ValueKey('flight-table-horizontal-scroll'),
+    );
+    final scrollView = tester.widget<SingleChildScrollView>(scrollFinder);
+    expect(scrollView.controller!.position.maxScrollExtent, greaterThan(0));
+
+    await tester.drag(scrollFinder, const Offset(-300, 0));
+    await tester.pumpAndSettle();
+
+    expect(scrollView.controller!.offset, greaterThan(0));
+  });
+
   testWidgets('sorts each data column in ascending and descending order', (
     tester,
   ) async {
