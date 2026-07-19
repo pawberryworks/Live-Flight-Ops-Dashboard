@@ -15,8 +15,11 @@ public sealed class OpenSkyOptionsValidator : IValidateOptions<OpenSkyOptions>
             failures.Add("OpenSkyConfig:ApiUrl must be an absolute HTTP or HTTPS URL.");
         }
 
-        if (options.RefreshIntervalInSeconds <= 0)
-            failures.Add("OpenSkyConfig:RefreshIntervalInSeconds must be greater than zero.");
+        if (options.RefreshIntervalInSeconds < RuntimeFlightSettings.MinimumRefreshIntervalInSeconds)
+        {
+            failures.Add(
+                $"OpenSkyConfig:RefreshIntervalInSeconds must be at least {RuntimeFlightSettings.MinimumRefreshIntervalInSeconds} seconds.");
+        }
 
         if (!RuntimeFlightSettings.AreValidBounds(
                 options.LatitudeMin,

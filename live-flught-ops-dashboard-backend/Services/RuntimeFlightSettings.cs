@@ -7,6 +7,8 @@ namespace LiveFlightOpsDashboardBackend.Services;
 /// <summary>Provides a validated, process-local snapshot of mutable dashboard settings.</summary>
 public sealed class RuntimeFlightSettings
 {
+    public const int MinimumRefreshIntervalInSeconds = 5;
+
     private readonly object _sync = new();
     private GeographicBounds _bounds;
     private int _refreshIntervalInSeconds;
@@ -46,8 +48,12 @@ public sealed class RuntimeFlightSettings
 
     public void SetRefreshIntervalInSeconds(int refreshIntervalInSeconds)
     {
-        if (refreshIntervalInSeconds <= 0)
-            throw new ArgumentOutOfRangeException(nameof(refreshIntervalInSeconds), "The refresh interval must be greater than zero.");
+        if (refreshIntervalInSeconds < MinimumRefreshIntervalInSeconds)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(refreshIntervalInSeconds),
+                $"The refresh interval must be at least {MinimumRefreshIntervalInSeconds} seconds.");
+        }
 
         lock (_sync)
             _refreshIntervalInSeconds = refreshIntervalInSeconds;

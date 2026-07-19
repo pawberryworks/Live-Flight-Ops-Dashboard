@@ -125,6 +125,9 @@ the interval and bounds; these updates are intentionally process-local and are
 reset when the backend restarts. Deploy a shared durable settings store and a
 distributed flight-state cache before running multiple backend instances.
 
+Refresh intervals must be at least five seconds, both in startup configuration
+and through the runtime update endpoint.
+
 The backend exposes `/health` for liveness checks. The OpenSky HTTP client has
 a bounded timeout, and the worker logs request, timeout, and payload failures
 while retaining the last successful snapshot.
