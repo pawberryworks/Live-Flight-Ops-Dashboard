@@ -217,7 +217,7 @@ class _NavigationItem extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                  color: isSelected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -246,7 +246,7 @@ class _NavigationItem extends StatelessWidget {
                 if (isSelected)
                   Icon(
                     Icons.arrow_forward_rounded,
-                    color: colors.primary,
+                    color: colors.onPrimaryContainer,
                     size: 18,
                   ),
               ],
