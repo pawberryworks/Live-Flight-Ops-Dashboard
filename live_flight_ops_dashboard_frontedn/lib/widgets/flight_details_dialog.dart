@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
+import '../helpers/timestamp_helpers.dart';
 import 'geographic_bounds_map.dart';
 
 const _detailColumns = <String>[
@@ -113,8 +114,8 @@ List<String> flightDetailValues(AircraftState state) => [
   state.icao24.toUpperCase(),
   state.callSign,
   state.originCountry,
-  _timestamp(state.timePosition),
-  _timestamp(state.lastContact),
+  timestamp_to_string(state.timePosition),
+  timestamp_to_string(state.lastContact),
   _number(state.latitude, suffix: '°'),
   _number(state.longitude, suffix: '°'),
   _number(state.barometricAltitude, suffix: ' m'),
@@ -150,22 +151,6 @@ GeographicBounds? flightDetailMapBoundsFor(AircraftState state) {
     longitudeMin: longitude - halfSpanLongitude,
     longitudeMax: longitude + halfSpanLongitude,
   );
-}
-
-String _timestamp(int? secondsSinceEpoch) {
-  if (secondsSinceEpoch == null) return '—';
-
-  final localTime = DateTime.fromMillisecondsSinceEpoch(
-    secondsSinceEpoch * Duration.millisecondsPerSecond,
-    isUtc: true,
-  ).toLocal();
-  final year = localTime.year.toString().padLeft(4, '0');
-  final month = localTime.month.toString().padLeft(2, '0');
-  final day = localTime.day.toString().padLeft(2, '0');
-  final hour = localTime.hour.toString().padLeft(2, '0');
-  final minute = localTime.minute.toString().padLeft(2, '0');
-  final second = localTime.second.toString().padLeft(2, '0');
-  return '$year-$month-$day $hour:$minute:$second';
 }
 
 String _number(double? value, {String suffix = ''}) =>
