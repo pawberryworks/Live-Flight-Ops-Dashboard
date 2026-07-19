@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 
-class FlightStatesList extends StatelessWidget {
+class FlightStatesList extends StatefulWidget {
   const FlightStatesList({
     required this.states,
     this.selectedAircraftIcao24,
@@ -17,8 +17,33 @@ class FlightStatesList extends StatelessWidget {
   final VoidCallback? onAircraftDeselected;
 
   @override
+  State<FlightStatesList> createState() => _FlightStatesListState();
+}
+
+class _FlightStatesListState extends State<FlightStatesList> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  List<AircraftState> get _filteredStates {
+    final query = _searchQuery;
+    if (query.isEmpty) return widget.states;
+
+    return widget.states.where((state) {
+      return state.callSign.toLowerCase().contains(query) ||
+          state.originCountry.toLowerCase().contains(query);
+    }).toList(growable: false);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final selectAircraft = onAircraftSelected;
+    final filteredStates = _filteredStates;
+    final selectAircraft = widget.onAircraftSelected;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -34,26 +59,55 @@ class FlightStatesList extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
-                Badge.count(count: states.length),
+                Badge.count(count: widget.states.length),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: TextField(
+              key: const ValueKey('tracked-flights-search'),
+              controller: _searchController,
+              onChanged: (value) => setState(
+                () => _searchQuery = value.trim().toLowerCase(),
+              ),
+              decoration: InputDecoration(
+                labelText: 'Search flights',
+                hintText: 'Call sign or country',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        }),
+                      ),
+                border: const OutlineInputBorder(),
+              ),
             ),
           ),
           const Divider(height: 1),
           Expanded(
-            child: states.isEmpty
+            child: widget.states.isEmpty
                 ? const Center(child: Text('No flights are currently tracked.'))
+                : filteredStates.isEmpty
+                ? const Center(child: Text('No flights match your search.'))
                 : ListView.separated(
-                    itemCount: states.length,
+                    itemCount: filteredStates.length,
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1),
                     itemBuilder: (context, index) => _FlightListItem(
-                      state: states[index],
+                      state: filteredStates[index],
                       isSelected:
-                          states[index].icao24 == selectedAircraftIcao24,
+                          filteredStates[index].icao24 ==
+                          widget.selectedAircraftIcao24,
                       onTap: selectAircraft == null
                           ? null
-                          : () => selectAircraft(states[index].icao24),
-                      onDoubleTap: onAircraftDeselected,
+                          : () => selectAircraft(filteredStates[index].icao24),
+                      onDoubleTap: widget.onAircraftDeselected,
                     ),
                   ),
           ),
