@@ -45,6 +45,26 @@ class RefreshIntervalService {
       );
     }
   }
+
+  Future<void> updateRefreshInterval(Duration interval) async {
+    final seconds = interval.inSeconds;
+    if (seconds <= 0 || interval != Duration(seconds: seconds)) {
+      throw const RefreshIntervalException(
+        'The refresh interval must be a positive whole number of seconds.',
+      );
+    }
+
+    final response = await _client.put(
+      _refreshIntervalUri.replace(path: '${_refreshIntervalUri.path}/$seconds'),
+      headers: const {'Accept': 'application/json'},
+    );
+
+    if (response.statusCode != 204) {
+      throw RefreshIntervalException(
+        'Could not update the refresh interval (HTTP ${response.statusCode}).',
+      );
+    }
+  }
 }
 
 class RefreshIntervalException implements Exception {
