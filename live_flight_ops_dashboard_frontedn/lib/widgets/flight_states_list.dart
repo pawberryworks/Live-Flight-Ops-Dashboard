@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
+import 'flight_details_dialog.dart';
 
 class FlightStatesList extends StatefulWidget {
   const FlightStatesList({
@@ -152,7 +153,12 @@ class _FlightListItem extends StatelessWidget {
             state.onGround ? Icons.flight_land : Icons.flight,
             color: Theme.of(context).colorScheme.primary,
           ),
-          title: Text(callSign),
+          title: Text(
+            callSign,
+            style: TextStyle(
+              color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface
+            ),
+          ),
           subtitle: Text(
             [
               state.originCountry,
@@ -161,13 +167,24 @@ class _FlightListItem extends StatelessWidget {
             ].join('  •  '),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant
+            ),
           ),
-          trailing: state.onGround
-              ? const Tooltip(
-                  message: 'On ground',
-                  child: Icon(Icons.circle, size: 10),
-                )
-              : null,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                key: ValueKey('flight-details-${state.icao24}'),
+                tooltip: 'Flight details',
+                onPressed: () => showFlightDetailsDialog(context, state),
+                icon: Icon(
+                  Icons.info_outline, 
+                  size: 20, 
+                  color: Theme.of(context).colorScheme.outline),
+              ),
+            ],
+          ),
         ),
       ),
     );

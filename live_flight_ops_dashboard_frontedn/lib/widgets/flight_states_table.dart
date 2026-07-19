@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
-import 'geographic_bounds_map.dart';
+import 'flight_details_dialog.dart';
 
 class FlightStatesTable extends StatefulWidget {
   const FlightStatesTable({
@@ -59,26 +59,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     super.dispose();
   }
 
-  List<String> _values(AircraftState state) => [
-    state.icao24.toUpperCase(),
-    state.callSign,
-    state.originCountry,
-    _timestamp(state.timePosition),
-    _timestamp(state.lastContact),
-    _number(state.latitude, suffix: '°'),
-    _number(state.longitude, suffix: '°'),
-    _number(state.barometricAltitude, suffix: ' m'),
-    state.onGround ? 'On ground' : 'Airborne',
-    _number(state.velocity, suffix: ' m/s'),
-    _number(state.trueTrack, suffix: '°'),
-    _number(state.verticalRate, suffix: ' m/s'),
-    state.sensors?.join(', ') ?? '—',
-    _number(state.geometricAltitude, suffix: ' m'),
-    state.squawk ?? '—',
-    state.spi ? 'Yes' : 'No',
-    state.positionSource.toString(),
-    state.category.toString(),
-  ];
+  List<String> _values(AircraftState state) => flightDetailValues(state);
 
   List<AircraftState> get _filteredStates {
     final states = _filters.isEmpty
@@ -275,108 +256,8 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     return (rowCount - 1) ~/ _rowsPerPage;
   }
 
-  Future<void> _showFlightDetails(AircraftState state) {
-    final identifier = state.callSign.isEmpty
-        ? state.icao24.toUpperCase()
-        : state.callSign;
-    final values = _values(state);
-    final mapBounds = _detailMapBoundsFor(state);
-    return showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 680),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '$identifier flight details',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (mapBounds != null) ...[
-                  SizedBox(
-                    height: 220,
-                    child: AircraftMapScope(
-                      aircraft: [state],
-                      selectedAircraftIcao24: state.icao24,
-                      onAircraftSelected: (_) {},
-                      onAircraftDeselected: () {},
-                      child: GeographicBoundsMap(
-                        key: const ValueKey('flight-details-map'),
-                        bounds: mapBounds,
-                        aircraftCount: 1,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ] else
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Text('Flight position is unavailable.'),
-                  ),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: _detailColumns.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 170,
-                            child: Text(
-                              _detailColumns[index],
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                          ),
-                          Expanded(child: Text(values[index])),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-GeographicBounds? _detailMapBoundsFor(AircraftState state) {
-  final latitude = state.latitude;
-  final longitude = state.longitude;
-  if (latitude == null || longitude == null) return null;
-
-  // A 20° by 20° viewport keeps the selected aircraft at the center while
-  // retaining useful geographical context in the compact details dialog.
-  const halfSpanLatitude = 0.1;
-  const halfSpanLogitude = 0.4;
-  const maximumMapLatitude = 85.05112878;
-  final centeredLatitude = latitude.clamp(
-    -maximumMapLatitude + halfSpanLogitude,
-    maximumMapLatitude - halfSpanLogitude,
-  ).toDouble();
-  return GeographicBounds(
-    latitudeMin: centeredLatitude - halfSpanLatitude,
-    latitudeMax: centeredLatitude + halfSpanLatitude,
-    longitudeMin: longitude - halfSpanLogitude,
-    longitudeMax: longitude + halfSpanLogitude,
-  );
+  Future<void> _showFlightDetails(AircraftState state) =>
+      showFlightDetailsDialog(context, state);
 }
 
 class _TablePagination extends StatelessWidget {
@@ -519,27 +400,6 @@ class _SortButton extends StatelessWidget {
       constraints: const BoxConstraints.tightFor(width: 24, height: 24),
     );
   }
-}
-
-String _number(double? value, {required String suffix}) {
-  if (value == null) return '—';
-  return '${value.toStringAsFixed(1)}$suffix';
-}
-
-String _timestamp(int? secondsSinceEpoch) {
-  if (secondsSinceEpoch == null) return '—';
-
-  final localTime = DateTime.fromMillisecondsSinceEpoch(
-    secondsSinceEpoch * Duration.millisecondsPerSecond,
-    isUtc: true,
-  ).toLocal();
-  final year = localTime.year.toString().padLeft(4, '0');
-  final month = localTime.month.toString().padLeft(2, '0');
-  final day = localTime.day.toString().padLeft(2, '0');
-  final hour = localTime.hour.toString().padLeft(2, '0');
-  final minute = localTime.minute.toString().padLeft(2, '0');
-  final second = localTime.second.toString().padLeft(2, '0');
-  return '$year-$month-$day $hour:$minute:$second';
 }
 
 int _compareSortValues(Object? left, Object? right) {

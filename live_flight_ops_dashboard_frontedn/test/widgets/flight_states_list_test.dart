@@ -131,6 +131,33 @@ void main() {
     expect(selectedAircraft, 'abc123');
   });
 
+  testWidgets('opens the flight details dialog from the details icon', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FlightStatesList(
+            states: [
+              _aircraft(
+                icao24: 'abc123',
+                callSign: 'DLH123',
+                originCountry: 'Germany',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('flight-details-abc123')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.text('DLH123 flight details'), findsOneWidget);
+    expect(find.text('Origin country'), findsOneWidget);
+  });
+
   testWidgets('clears the selection when a flight is double tapped', (
     tester,
   ) async {
