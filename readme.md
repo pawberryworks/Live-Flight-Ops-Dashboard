@@ -102,8 +102,35 @@ package) before extending that feature further.
 3. The controller publishes a ready, loading, or failure state to the UI.
 4. The UI renders the same flight-state collection in the map, list, and table.
 5. A periodic timer refreshes flight states using the configured interval.
-6. Updating the interval persists it through the backend and restarts polling
-   only after the update succeeds.
+6. Updating the interval applies it to the backend runtime settings and restarts
+   frontend polling only after the update succeeds.
+
+## Backend Architecture
+
+The ASP.NET Core backend separates API delivery from data ingestion. A hosted
+worker polls OpenSky with a named `HttpClient`, converts OpenSky's positional
+state arrays into backend DTOs, and stores the latest successful response in
+memory. Controllers read that snapshot, so dashboard clients never invoke the
+external provider directly.
+
+```text
+OpenSky API → FlightStatesBackgroundService → IMemoryCache
+                                             ↓
+Flutter client ← API controllers ← application services
+```
+
+`OpenSkyOptions` validates the startup URL, refresh interval, and geographic
+bounds. `RuntimeFlightSettings` owns validated, thread-safe runtime updates to
+the interval and bounds; these updates are intentionally process-local and are
+reset when the backend restarts. Deploy a shared durable settings store and a
+distributed flight-state cache before running multiple backend instances.
+
+Refresh intervals must be at least five seconds, both in startup configuration
+and through the runtime update endpoint.
+
+The backend exposes `/health` for liveness checks. The OpenSky HTTP client has
+a bounded timeout, and the worker logs request, timeout, and payload failures
+while retaining the last successful snapshot.
 
 ## Testing Strategy
 

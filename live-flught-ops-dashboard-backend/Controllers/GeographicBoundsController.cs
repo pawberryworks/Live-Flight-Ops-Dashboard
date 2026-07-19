@@ -22,9 +22,18 @@ public sealed class GeographicBoundsController : ControllerBase
     }
 
     [HttpPut]
-    public IActionResult PutGeographicBounds(GeographicBounds geographicBounds)
+    public IActionResult PutGeographicBounds([FromBody] GeographicBounds geographicBounds)
     {
-        _geographicBoundsService.SetGeographicBounds(geographicBounds);
+        try
+        {
+            _geographicBoundsService.SetGeographicBounds(geographicBounds);
+        }
+        catch (ArgumentException exception)
+        {
+            ModelState.AddModelError(nameof(geographicBounds), exception.Message);
+            return ValidationProblem(ModelState);
+        }
+
         return NoContent();
     }
 }

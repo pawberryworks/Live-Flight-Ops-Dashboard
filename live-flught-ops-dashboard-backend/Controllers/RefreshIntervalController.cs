@@ -5,7 +5,7 @@ namespace LiveFlightOpsDashboardBackend.Controllers;
 
 [ApiController]
 [Route("api/refreshInterval")]
-public class RefreshIntervalController : Controller
+public sealed class RefreshIntervalController : ControllerBase
 {
     private readonly IRefreshIntervalService _refreshService;
 
@@ -15,7 +15,7 @@ public class RefreshIntervalController : Controller
     }
 
     [HttpGet()]
-    public ActionResult<int> GetRefresIntervalhValue()
+    public ActionResult<int> GetRefreshIntervalValue()
     {
         return _refreshService.GetRefreshIntervalInSeconds();
     }
@@ -23,7 +23,16 @@ public class RefreshIntervalController : Controller
     [HttpPut("{refreshIntervalInSeconds:int}")]
     public IActionResult PutRefreshValue(int refreshIntervalInSeconds)
     {
-        _refreshService.SetRefreshIntervalInSeconds(refreshIntervalInSeconds);
+        try
+        {
+            _refreshService.SetRefreshIntervalInSeconds(refreshIntervalInSeconds);
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            ModelState.AddModelError(nameof(refreshIntervalInSeconds), exception.Message);
+            return ValidationProblem(ModelState);
+        }
+
         return NoContent();
     }
 }

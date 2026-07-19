@@ -1,21 +1,21 @@
 ﻿namespace LiveFlightOpsDashboardBackend.Services;
 
-public class RefreshIntervalService: IRefreshIntervalService
+public sealed class RefreshIntervalService : IRefreshIntervalService
 {
-    private readonly IConfiguration _configuration;
+    private readonly RuntimeFlightSettings _settings;
 
-    public RefreshIntervalService(IConfiguration configuration)
+    public RefreshIntervalService(RuntimeFlightSettings settings)
     {
-        _configuration = configuration;
+        _settings = settings;
     }
 
     public int GetRefreshIntervalInSeconds()
     {
-        return _configuration.GetValue<int>("OpenSkyConfig:RefreshIntervalInSeconds");
+        return _settings.GetRefreshIntervalInSeconds();
     }
 
     public void SetRefreshIntervalInSeconds(int refreshIntervalInSeconds)
     {
-        _configuration["OpenSkyConfig:RefreshIntervalInSeconds"] = refreshIntervalInSeconds.ToString();
+        _settings.SetRefreshIntervalInSeconds(refreshIntervalInSeconds);
     }
 }
