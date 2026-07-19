@@ -160,34 +160,6 @@ class _GeographicBoundsMapState extends State<GeographicBoundsMap> {
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 20,
-                      left: 20,
-                      child: Card(
-                        elevation: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Operational area',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${widget.bounds.latitudeMin.toStringAsFixed(2)}°–${widget.bounds.latitudeMax.toStringAsFixed(2)}° N  •  '
-                                '${widget.bounds.longitudeMin.toStringAsFixed(2)}°–${widget.bounds.longitudeMax.toStringAsFixed(2)}° E',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
                     const Positioned(
                       right: 8,
                       bottom: 6,
