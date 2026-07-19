@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
@@ -19,6 +21,7 @@ class FlightStatesTable extends StatefulWidget {
 
 class _FlightStatesTableState extends State<FlightStatesTable> {
   static const _rowsPerPage = 25;
+  static const _minimumTableWidth = 780.0;
   static const _detailColumns = <String>[
     'ICAO24',
     'Call sign',
@@ -171,12 +174,18 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                     trackVisibility: true,
                     interactive: true,
                     scrollbarOrientation: ScrollbarOrientation.bottom,
-                    child: SingleChildScrollView(
-                      key: const ValueKey('flight-table-horizontal-scroll'),
-                      controller: _horizontalScrollController,
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        child: DataTable(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        key: const ValueKey('flight-table-horizontal-scroll'),
+                        controller: _horizontalScrollController,
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: math.max(
+                            constraints.maxWidth,
+                            _minimumTableWidth,
+                          ),
+                          child: SingleChildScrollView(
+                            child: DataTable(
                           headingRowHeight: 76,
                           columns: [
                             for (final index in _tableColumnIndexes)
@@ -214,6 +223,8 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                                 ],
                               ),
                           ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
