@@ -10,7 +10,7 @@ class SettingsView extends StatefulWidget {
     super.key,
   });
 
-  final Duration refreshInterval;
+  final Duration? refreshInterval;
   final RefreshIntervalService refreshIntervalService;
   final ValueChanged<Duration> onRefreshIntervalUpdated;
 
@@ -22,21 +22,47 @@ class _SettingsViewState extends State<SettingsView> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _refreshIntervalController;
   bool _isSaving = false;
+  bool _isLoadingInterval = false;
+  String? _loadError;
   String? _successMessage;
 
   @override
   void initState() {
     super.initState();
     _refreshIntervalController = TextEditingController(
-      text: widget.refreshInterval.inSeconds.toString(),
+      text: widget.refreshInterval?.inSeconds.toString() ?? '',
     );
+    if (widget.refreshInterval == null) {
+      _loadRefreshInterval();
+    }
   }
 
   @override
   void didUpdateWidget(covariant SettingsView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.refreshInterval != widget.refreshInterval && !_isSaving) {
-      _refreshIntervalController.text = widget.refreshInterval.inSeconds.toString();
+    if (oldWidget.refreshInterval != widget.refreshInterval &&
+        widget.refreshInterval != null &&
+        !_isSaving) {
+      _refreshIntervalController.text = widget.refreshInterval!.inSeconds
+          .toString();
+    }
+  }
+
+  Future<void> _loadRefreshInterval() async {
+    setState(() => _isLoadingInterval = true);
+    try {
+      final refreshInterval = await widget.refreshIntervalService
+          .getRefreshInterval();
+      if (!mounted || _refreshIntervalController.text.isNotEmpty) return;
+      setState(
+        () => _refreshIntervalController.text = refreshInterval.inSeconds
+            .toString(),
+      );
+    } on RefreshIntervalException catch (error) {
+      if (!mounted) return;
+      setState(() => _loadError = error.message);
+    } finally {
+      if (mounted) setState(() => _isLoadingInterval = false);
     }
   }
 
@@ -92,7 +118,7 @@ class _SettingsViewState extends State<SettingsView> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _refreshIntervalController,
-                    enabled: !_isSaving,
+                    enabled: !_isSaving && !_isLoadingInterval,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Refresh interval',
@@ -109,7 +135,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: _isSaving ? null : _save,
+                    onPressed: _isSaving || _isLoadingInterval ? null : _save,
                     icon: _isSaving
                         ? const SizedBox(
                             height: 18,
@@ -119,6 +145,13 @@ class _SettingsViewState extends State<SettingsView> {
                         : const Icon(Icons.save),
                     label: Text(_isSaving ? 'Saving...' : 'Save changes'),
                   ),
+                  if (_loadError != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Unable to load the current interval. Enter a new value to continue.',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ],
                   if (_successMessage != null) ...[
                     const SizedBox(height: 16),
                     Text(

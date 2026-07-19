@@ -442,5 +442,7 @@ class _DashboardData {
 
   final GeographicBounds bounds;
   final FlightStates flightStates;
-  final Duration refreshInterval;
+  // Nullable for Flutter web hot reload: instances created before this field
+  // was added receive null until dashboard data is loaded again.
+  final Duration? refreshInterval;
 }
