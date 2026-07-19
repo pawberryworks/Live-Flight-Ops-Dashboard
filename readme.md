@@ -40,7 +40,7 @@ ASP.NET Core API
 
 | Layer | Key code | Decision |
 | --- | --- | --- |
-| Presentation | `lib/main.dart`, `lib/widgets/` | Widgets render controller state and invoke callbacks. They do not create or call HTTP services directly. |
+| Presentation | `lib/main.dart`, `lib/widgets/` | `DashboardPage` owns app-shell concerns (navigation, theme toggle, and transient error overlay); feature widgets render controller state and invoke callbacks. They do not create or call HTTP services directly. |
 | Application | `lib/features/dashboard/dashboard_controller.dart` | One controller owns dashboard loading, selection, refresh scheduling, and lifecycle transitions. |
 | Repository contracts | `lib/repositories/dashboard_repositories.dart` | Stable interfaces prevent the application layer from depending on a transport implementation. |
 | Data/infrastructure | `lib/repositories/http_dashboard_repositories.dart`, `lib/services/` | HTTP adapters delegate to focused services that decode backend responses and normalize service errors. |
@@ -55,6 +55,20 @@ refresh interval, selected aircraft, loading state, and load failures. This
 keeps asynchronous workflow and polling logic out of the widget tree, enables
 repository fakes in tests, and ensures map, list, table, and settings views use
 the same dashboard state.
+
+Presentation-only state remains local to the widgets that need it: the dashboard
+page owns the selected navigation page and theme callback, while the list and
+table own their search, filter, sorting, pagination, and dialog interactions.
+This keeps those transient UI concerns out of the backend-facing controller.
+
+### Visible backend errors without discarding useful data
+
+The controller records each backend failure as an error notification event.
+`DashboardPage` listens for those events and displays a dismissible
+`BackendErrorPopup`. An initial-load failure shows the retry screen; a failed
+periodic refresh instead leaves the last successful dashboard state visible and
+surfaces the error without replacing the screen. The notification identifier
+allows repeated failures with the same message to remain visible to operators.
 
 ### Safe refresh and lifecycle behavior
 
@@ -96,11 +110,15 @@ package) before extending that feature further.
 ## Data Flow
 
 1. `DashboardPage` constructs the configured HTTP repositories and
-   `DashboardController`.
+   `DashboardController`, then listens to controller changes for rendering and
+   transient backend-error notifications.
 2. The controller retrieves the refresh interval, geographic bounds, and
    current flight states.
 3. The controller publishes a ready, loading, or failure state to the UI.
-4. The UI renders the same flight-state collection in the map, list, and table.
+4. The UI renders the same flight-state collection in the map, searchable
+   tracked-flights list, and filterable/sortable table. Map and list selections
+   are coordinated through the controller; the list and table can open the
+   shared flight-details dialog.
 5. A periodic timer refreshes flight states using the configured interval.
 6. Updating the interval applies it to the backend runtime settings and restarts
    frontend polling only after the update succeeds.
@@ -227,12 +245,15 @@ application authentication scheme.
 
 ## Testing Strategy
 
-- **Model tests** validate backend payload parsing.
+- **Model tests** validate the Flutter decoding of backend aircraft-state
+  payloads.
 - **Service tests** validate HTTP methods, response handling, and timeout
   normalization using mock HTTP clients.
-- **Controller tests** validate dashboard loading, selection, refresh-interval
-  updates, stale-request suppression, and disposal during in-flight work.
-- **Widget tests** cover list, table, and map interaction behavior.
+- **Controller tests** validate dashboard loading, selection, backend-error
+  notifications, refresh-interval updates, stale-request suppression, and
+  disposal during in-flight work.
+- **Widget tests** cover map interaction plus tracked-flight search, selection,
+  flight-details access, and table behavior.
 
 Run frontend checks from the Flutter project directory when Flutter is
 available:
