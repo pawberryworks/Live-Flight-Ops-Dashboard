@@ -2,17 +2,17 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../core/api_configuration.dart';
 import '../models/flight_states.dart';
 
 class FlightStatesService {
-  FlightStatesService({http.Client? client}) : _client = client ?? http.Client();
-
-  static final Uri _flightStatesUri = Uri.https(
-    'localhost:7002',
-    '/api/flightStates',
-  );
+  FlightStatesService({http.Client? client, ApiConfiguration? configuration})
+    : _client = client ?? http.Client(),
+      _flightStatesUri = (configuration ?? ApiConfiguration.fromEnvironment())
+          .endpoint('/api/flightStates');
 
   final http.Client _client;
+  final Uri _flightStatesUri;
 
   void close() => _client.close();
 

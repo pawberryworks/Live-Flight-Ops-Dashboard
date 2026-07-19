@@ -2,16 +2,18 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-class RefreshIntervalService {
-  RefreshIntervalService({http.Client? client})
-    : _client = client ?? http.Client();
+import '../core/api_configuration.dart';
 
-  static final Uri _refreshIntervalUri = Uri.https(
-    'localhost:7002',
-    '/api/refreshInterval',
-  );
+class RefreshIntervalService {
+  RefreshIntervalService({http.Client? client, ApiConfiguration? configuration})
+    : _client = client ?? http.Client(),
+      _refreshIntervalUri =
+          (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
+            '/api/refreshInterval',
+          );
 
   final http.Client _client;
+  final Uri _refreshIntervalUri;
 
   void close() => _client.close();
 

@@ -2,6 +2,16 @@
 
 A new Flutter project.
 
+## Backend configuration
+
+The API endpoint is configured at build/run time. Local development defaults to
+`https://localhost:7002`; override it for device, staging, or production builds
+without changing source code:
+
+```bash
+flutter run --dart-define=API_BASE_URL=https://api.example.com
+```
+
 ## Flutter web keyboard assertion
 
 An assertion such as

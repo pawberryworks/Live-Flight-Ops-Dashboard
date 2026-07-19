@@ -2,18 +2,19 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../core/api_configuration.dart';
 import '../models/geographic_bounds.dart';
 
 class GeographicBoundsService {
-  GeographicBoundsService({http.Client? client})
-    : _client = client ?? http.Client();
-
-  static final Uri _geographicBoundsUri = Uri.https(
-    'localhost:7002',
-    '/api/geographicBounds',
-  );
+  GeographicBoundsService({http.Client? client, ApiConfiguration? configuration})
+    : _client = client ?? http.Client(),
+      _geographicBoundsUri =
+          (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
+            '/api/geographicBounds',
+          );
 
   final http.Client _client;
+  final Uri _geographicBoundsUri;
 
   void close() => _client.close();
 
