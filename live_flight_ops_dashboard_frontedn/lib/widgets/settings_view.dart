@@ -60,11 +60,8 @@ class _SettingsViewState extends State<SettingsView> {
       await widget.onRefreshIntervalUpdated(interval);
       if (!mounted) return;
       setState(() => _successMessage = 'Refresh interval updated.');
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save settings: $error')));
+    } catch (_) {
+      // DashboardPage shows backend failures in its top-right notification.
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

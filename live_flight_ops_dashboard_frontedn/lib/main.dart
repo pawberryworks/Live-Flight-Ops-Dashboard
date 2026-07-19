@@ -7,6 +7,7 @@ import 'services/flight_states_service.dart';
 import 'services/geographic_bounds_service.dart';
 import 'services/refresh_interval_service.dart';
 import 'theme/app_colors.dart';
+import 'widgets/backend_error_popup.dart';
 import 'widgets/dashboard_sidebar.dart';
 import 'widgets/flight_states_list.dart';
 import 'widgets/flight_states_table.dart';
@@ -55,12 +56,15 @@ class _DashboardPageState extends State<DashboardPage> {
   late final DashboardController _controller;
   late final bool _ownsController;
   var _selectedPage = 0;
+  OverlayEntry? _errorPopup;
+  int _handledErrorNotificationId = 0;
 
   @override
   void initState() {
     super.initState();
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? _createController();
+    _controller.addListener(_showBackendErrorPopup);
     _controller.load();
   }
 
@@ -89,8 +93,45 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   void dispose() {
+    _controller.removeListener(_showBackendErrorPopup);
+    _removeErrorPopup();
     if (_ownsController) _controller.dispose();
     super.dispose();
+  }
+
+  void _showBackendErrorPopup() {
+    final notificationId = _controller.errorNotificationId;
+    final error = _controller.lastBackendError;
+    if (!mounted ||
+        error == null ||
+        notificationId == _handledErrorNotificationId) {
+      return;
+    }
+    _handledErrorNotificationId = notificationId;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _removeErrorPopup();
+      late final OverlayEntry popup;
+      popup = OverlayEntry(
+        builder: (context) => Positioned(
+          top: 16,
+          right: 16,
+          child: BackendErrorPopup(
+            error: error,
+            onDismiss: () => _removeErrorPopup(popup),
+          ),
+        ),
+      );
+      _errorPopup = popup;
+      Overlay.of(context, rootOverlay: true).insert(popup);
+    });
+  }
+
+  void _removeErrorPopup([OverlayEntry? popup]) {
+    if (popup != null && popup != _errorPopup) return;
+    _errorPopup?.remove();
+    _errorPopup = null;
   }
 
   @override
