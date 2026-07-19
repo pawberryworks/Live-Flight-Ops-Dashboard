@@ -10,7 +10,7 @@ public sealed class OpenSkyOptionsValidator : IValidateOptions<OpenSkyOptions>
         var failures = new List<string>();
 
         if (!Uri.TryCreate(options.ApiUrl, UriKind.Absolute, out var apiUrl)
-            || apiUrl.Scheme is not (Uri.UriSchemeHttp or Uri.UriSchemeHttps))
+            || (apiUrl.Scheme != Uri.UriSchemeHttp && apiUrl.Scheme != Uri.UriSchemeHttps))
         {
             failures.Add("OpenSkyConfig:ApiUrl must be an absolute HTTP or HTTPS URL.");
         }
