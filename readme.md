@@ -107,30 +107,123 @@ package) before extending that feature further.
 
 ## Backend Architecture
 
-The ASP.NET Core backend separates API delivery from data ingestion. A hosted
-worker polls OpenSky with a named `HttpClient`, converts OpenSky's positional
-state arrays into backend DTOs, and stores the latest successful response in
-memory. Controllers read that snapshot, so dashboard clients never invoke the
-external provider directly.
+The ASP.NET Core backend is a small read-model service between the dashboard
+and OpenSky. It separates ingestion of provider data from API delivery: a
+hosted worker polls OpenSky, converts the provider payload into backend DTOs,
+and publishes the latest successful snapshot to an in-memory cache. API
+controllers read that snapshot, so dashboard clients never invoke the external
+provider directly or wait for an upstream request on every screen refresh.
 
 ```text
-OpenSky API → FlightStatesBackgroundService → IMemoryCache
-                                             ↓
-Flutter client ← API controllers ← application services
+OpenSky API
+    │  named HttpClient, 15-second timeout
+    ▼
+FlightStatesBackgroundService
+    │  validates/deserializes provider response
+    ▼
+IMemoryCache (latest successful FlightStatesResponse)
+    │
+    ▼
+FlightStatesService ──► FlightStatesController ──► GET /api/flightStates
+
+RuntimeFlightSettings ◄── RefreshIntervalService / GeographicBoundsService
+    │                         │                         │
+    └──────── worker reads ───┴── API controllers ──────┘
 ```
 
-`OpenSkyOptions` validates the startup URL, refresh interval, and geographic
-bounds. `RuntimeFlightSettings` owns validated, thread-safe runtime updates to
-the interval and bounds; these updates are intentionally process-local and are
-reset when the backend restarts. Deploy a shared durable settings store and a
-distributed flight-state cache before running multiple backend instances.
+### Components and responsibilities
 
-Refresh intervals must be at least five seconds, both in startup configuration
-and through the runtime update endpoint.
+| Component | Responsibility |
+| --- | --- |
+| `Program.cs` | Composes controllers, health checks, the memory cache, the named OpenSky HTTP client, runtime settings, scoped services, and the hosted worker. HTTPS redirection is enabled for all environments. |
+| `OpenSkyOptions` and validator | Bind and validate startup configuration: an absolute HTTP(S) provider URL, valid latitude/longitude ordering and ranges, and a refresh interval of at least five seconds. Invalid startup configuration fails fast. |
+| `RuntimeFlightSettings` | Holds the mutable geographic bounds and refresh interval behind a lock. It validates writes before publishing a new in-process value. |
+| `FlightStatesBackgroundService` | Runs continuously, requests `states/all` with the current bounds, deserializes the response, logs failures, and only replaces the cached snapshot after a successful response. |
+| Application services | Keep controllers thin: flight states are read from cache, while bounds and refresh interval delegate to the runtime settings owner. |
+| Controllers | Expose the dashboard contract: `GET /api/flightStates`, `GET`/`PUT /api/geographicBounds`, and `GET`/`PUT /api/refreshInterval/{seconds}`. |
 
-The backend exposes `/health` for liveness checks. The OpenSky HTTP client has
-a bounded timeout, and the worker logs request, timeout, and payload failures
-while retaining the last successful snapshot.
+### Architecture decisions
+
+#### 1. Poll OpenSky once in the backend, not once per dashboard client
+
+**Decision.** A single `BackgroundService` performs the external request and
+the dashboard API serves the cached result.
+
+**Why.** This bounds outbound OpenSky traffic to the configured refresh rate,
+avoids duplicate provider calls as clients scale, and gives every dashboard
+view a consistent recent snapshot. It also keeps provider URL construction and
+payload handling out of the Flutter application.
+
+**Trade-off.** The returned data can be up to one polling interval old. Before
+the first successful poll, `GET /api/flightStates` returns `503 Service
+Unavailable` rather than an empty response so clients can distinguish a
+not-ready backend from a valid empty flight set.
+
+#### 2. Retain the last known good snapshot on provider failure
+
+**Decision.** The worker writes to `IMemoryCache` only after it receives and
+deserializes a successful response. Timeout, HTTP, malformed-JSON, and empty
+payload conditions are logged without clearing the cache.
+
+**Why.** Brief upstream failures do not make the dashboard suddenly lose useful
+flight data. This favors operational continuity over forcing every caller to
+handle an unavailable upstream service immediately.
+
+**Trade-off.** The API does not currently expose snapshot age, so a client
+cannot tell a recent snapshot from an older retained one. Add fetched-at
+metadata and a staleness policy if the product needs that distinction.
+
+#### 3. Keep mutable settings process-local and thread-safe
+
+**Decision.** `RuntimeFlightSettings` is a singleton that owns validated
+runtime changes to the refresh interval and geographic bounds, using a lock to
+provide a consistent snapshot to controllers and the background worker.
+
+**Why.** Operators can change the polling region or cadence without restarting
+the service, while the worker cannot read partially updated bounds. The
+five-second minimum protects the upstream API and avoids an accidental
+tight-polling loop.
+
+**Trade-off.** Changes are intentionally ephemeral: they reset when the
+process restarts and are not shared across instances. Use a durable settings
+store plus change notification for persistence, and a distributed cache (or a
+separate ingestion service) before deploying multiple backend replicas.
+
+#### 4. Validate configuration early and isolate external HTTP configuration
+
+**Decision.** Startup configuration is bound to `OpenSkyOptions` and validated
+on startup; the worker obtains a named `OpenSky` client from
+`IHttpClientFactory`, with a base URL derived from those validated options and
+a 15-second timeout.
+
+**Why.** Bad endpoints, invalid coordinates, and unsafe polling intervals fail
+at startup instead of causing a delayed production failure. The named client
+centralizes the provider-specific URL and timeout while retaining the
+framework-managed HTTP client lifetime.
+
+#### 5. Limit browser access to local development
+
+**Decision.** In Development, CORS accepts only absolute origins whose host is
+`localhost`, with all request headers and methods allowed. Other environments
+do not register this policy.
+
+**Why.** This enables the local Flutter web application without publishing a
+permissive cross-origin policy in deployed environments.
+
+**Trade-off.** Production browser clients require an explicitly designed CORS
+and authentication/authorization policy; the current API does not add an
+application authentication scheme.
+
+### Operational behavior
+
+- `GET /health` is a liveness endpoint registered through ASP.NET Core health
+  checks.
+- The OpenSky client uses a 15-second timeout. The worker logs request,
+  timeout, and payload failures while retaining the last successful snapshot.
+- The current bounds are sent to OpenSky as `lamin`, `lomin`, `lamax`, and
+  `lomax` query parameters. A changed bound takes effect on the next poll.
+- A changed refresh interval is used for the next delay cycle. It must be at
+  least five seconds both at startup and through the runtime update endpoint.
 
 ## Testing Strategy
 
