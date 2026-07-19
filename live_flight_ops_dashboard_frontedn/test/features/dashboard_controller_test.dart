@@ -45,6 +45,39 @@ void main() {
     controller.dispose();
   });
 
+  test('reports a backend error when loading dashboard data fails', () async {
+    final controller = DashboardController(
+      flightStatesRepository: _FailingFlightStatesRepository(),
+      geographicBoundsRepository: _GeographicBoundsRepository(),
+      refreshIntervalRepository: _RefreshIntervalRepository(),
+    );
+
+    await controller.load();
+
+    expect(controller.state.isReady, isFalse);
+    expect(controller.errorNotificationId, 1);
+    expect(controller.lastBackendError, isA<StateError>());
+    controller.dispose();
+  });
+
+  test('reports a backend error when saving the refresh interval fails', () async {
+    final controller = DashboardController(
+      flightStatesRepository: _FlightStatesRepository(_flightStates('abc123')),
+      geographicBoundsRepository: _GeographicBoundsRepository(),
+      refreshIntervalRepository: _FailingRefreshIntervalRepository(),
+    );
+    await controller.load();
+
+    await expectLater(
+      controller.updateRefreshInterval(const Duration(seconds: 20)),
+      throwsA(isA<StateError>()),
+    );
+
+    expect(controller.errorNotificationId, 1);
+    expect(controller.lastBackendError, isA<StateError>());
+    controller.dispose();
+  });
+
   test('ignores a stale load that completes after a newer request', () async {
     final firstResponse = Completer<FlightStates>();
     final secondResponse = Completer<FlightStates>();
@@ -125,6 +158,21 @@ class _QueuedFlightStatesRepository implements FlightStatesRepository {
 
   @override
   Future<FlightStates> getFlightStates() => _responses.removeAt(0);
+}
+
+class _FailingFlightStatesRepository implements FlightStatesRepository {
+  @override
+  Future<FlightStates> getFlightStates() =>
+      Future.error(StateError('Flight states backend is unavailable'));
+}
+
+class _FailingRefreshIntervalRepository implements RefreshIntervalRepository {
+  @override
+  Future<Duration> getRefreshInterval() async => const Duration(seconds: 10);
+
+  @override
+  Future<void> updateRefreshInterval(Duration interval) =>
+      Future.error(StateError('Refresh interval backend is unavailable'));
 }
 
 FlightStates _flightStates(String icao24) => FlightStates(

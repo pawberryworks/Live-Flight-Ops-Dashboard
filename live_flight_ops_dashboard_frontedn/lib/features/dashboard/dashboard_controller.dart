@@ -29,6 +29,15 @@ class DashboardController extends ChangeNotifier {
   bool _refreshInProgress = false;
   bool _isDisposed = false;
   int _loadGeneration = 0;
+  int _errorNotificationId = 0;
+  Object? _lastBackendError;
+
+  /// Increments each time a request to the backend fails.
+  ///
+  /// The UI uses this as an event id so repeated failures with the same error
+  /// still result in a visible notification.
+  int get errorNotificationId => _errorNotificationId;
+  Object? get lastBackendError => _lastBackendError;
 
   Future<void> load() async {
     final loadGeneration = ++_loadGeneration;
@@ -52,12 +61,18 @@ class DashboardController extends ChangeNotifier {
       _startRefreshTimer(refreshInterval);
     } catch (error) {
       if (_isDisposed || loadGeneration != _loadGeneration) return;
+      _recordBackendError(error);
       _setState(DashboardState.failure(error));
     }
   }
 
   Future<void> updateRefreshInterval(Duration interval) async {
-    await _refreshIntervalRepository.updateRefreshInterval(interval);
+    try {
+      await _refreshIntervalRepository.updateRefreshInterval(interval);
+    } catch (error) {
+      _recordBackendError(error);
+      rethrow;
+    }
     if (_isDisposed || !_state.isReady) return;
     _setState(_state.copyWith(refreshInterval: interval));
     _startRefreshTimer(interval);
@@ -86,8 +101,9 @@ class DashboardController extends ChangeNotifier {
       if (!_isDisposed && _state.isReady) {
         _setState(_state.copyWith(flightStates: flightStates));
       }
-    } catch (_) {
+    } catch (error) {
       // Retain the last successful response and try again at the next interval.
+      _recordBackendError(error);
     } finally {
       _refreshInProgress = false;
     }
@@ -96,6 +112,13 @@ class DashboardController extends ChangeNotifier {
   void _setState(DashboardState value) {
     if (_isDisposed) return;
     _state = value;
+    notifyListeners();
+  }
+
+  void _recordBackendError(Object error) {
+    if (_isDisposed) return;
+    _lastBackendError = error;
+    _errorNotificationId++;
     notifyListeners();
   }
 
