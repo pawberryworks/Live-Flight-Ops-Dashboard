@@ -31,7 +31,7 @@ void main() {
     expect(find.byKey(const ValueKey('flight-row-def456')), findsOneWidget);
 
     await tester.enterText(
-      find.byKey(const ValueKey('filter-country')),
+      find.byKey(const ValueKey('filter-origin-country')),
       'germ',
     );
     await tester.pump();
@@ -41,7 +41,7 @@ void main() {
     expect(find.text('1 of 2'), findsOneWidget);
   });
 
-  testWidgets('opens a map dialog containing only the selected flight', (
+  testWidgets('opens a flight details dialog when a row is selected', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -58,13 +58,14 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const ValueKey('show-map-abc123')));
+    await tester.tap(find.byKey(const ValueKey('flight-row-abc123')));
     await tester.pumpAndSettle();
 
     expect(find.byType(Dialog), findsOneWidget);
-    expect(find.text('DLH123 on map'), findsOneWidget);
-    expect(find.bySemanticsLabel('DLH123 • 10000 m'), findsOneWidget);
-    expect(find.bySemanticsLabel('AFR456 • 10000 m'), findsNothing);
+    expect(find.text('DLH123 flight details'), findsOneWidget);
+    expect(find.text('Time position'), findsOneWidget);
+    expect(find.text('Altitude'), findsOneWidget);
+    expect(find.text('10000.0 m'), findsOneWidget);
   });
 
   testWidgets('only builds the current page of a large flight list', (
@@ -153,15 +154,15 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(18));
-    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(18));
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(6));
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(6));
 
-    await tester.tap(find.byTooltip('Sort Country ascending'));
+    await tester.tap(find.byTooltip('Sort Origin country ascending'));
     await tester.pump();
 
     var table = tester.widget<DataTable>(find.byType(DataTable));
-    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(18));
-    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(17));
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(6));
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(5));
     expect(
       table.rows.map((row) => row.key),
       [
@@ -171,13 +172,13 @@ void main() {
     );
 
     await tester.tap(
-      find.byTooltip('Sorted Country ascending; sort descending'),
+      find.byTooltip('Sorted Origin country ascending; sort descending'),
     );
     await tester.pump();
 
     table = tester.widget<DataTable>(find.byType(DataTable));
-    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(17));
-    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(18));
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsNWidgets(5));
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsNWidgets(6));
     expect(
       table.rows.map((row) => row.key),
       [
@@ -194,15 +195,15 @@ void main() {
           body: FlightStatesTable(
             bounds: bounds,
             states: [
-              _aircraft('high', 'HIGH', 'Germany', altitude: 10000),
-              _aircraft('low', 'LOW', 'France', altitude: 900),
+              _aircraft('high', 'HIGH', 'Germany', longitude: 10000),
+              _aircraft('low', 'LOW', 'France', longitude: 900),
             ],
           ),
         ),
       ),
     );
 
-    await tester.tap(find.byTooltip('Sort Altitude ascending'));
+    await tester.tap(find.byTooltip('Sort Longitude ascending'));
     await tester.pump();
 
     final table = tester.widget<DataTable>(find.byType(DataTable));
@@ -217,7 +218,7 @@ AircraftState _aircraft(
   String icao24,
   String callSign,
   String country, {
-  double altitude = 10000,
+  double longitude = 13.4,
 }) {
   return AircraftState(
     icao24: icao24,
@@ -225,9 +226,9 @@ AircraftState _aircraft(
     originCountry: country,
     timePosition: null,
     lastContact: null,
-    longitude: 13.4,
+    longitude: longitude,
     latitude: 52.5,
-    barometricAltitude: altitude,
+    barometricAltitude: 10000,
     onGround: false,
     velocity: 220,
     trueTrack: 90,

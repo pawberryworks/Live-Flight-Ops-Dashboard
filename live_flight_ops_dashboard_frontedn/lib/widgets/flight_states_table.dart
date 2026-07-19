@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/aircraft_state.dart';
 import '../models/geographic_bounds.dart';
-import 'geographic_bounds_map.dart';
 
 class FlightStatesTable extends StatefulWidget {
   const FlightStatesTable({
@@ -20,16 +19,16 @@ class FlightStatesTable extends StatefulWidget {
 
 class _FlightStatesTableState extends State<FlightStatesTable> {
   static const _rowsPerPage = 25;
-  static const _columns = <String>[
+  static const _detailColumns = <String>[
     'ICAO24',
     'Call sign',
-    'Country',
+    'Origin country',
     'Time position',
     'Last contact',
     'Latitude',
     'Longitude',
     'Altitude',
-    'Status',
+    'On ground',
     'Velocity',
     'Track',
     'Vertical rate',
@@ -40,6 +39,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     'Position source',
     'Category',
   ];
+  static const _tableColumnIndexes = <int>[0, 1, 2, 6, 5, 8];
 
   final Map<int, String> _filters = {};
   final ScrollController _horizontalScrollController = ScrollController();
@@ -179,10 +179,10 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                         child: DataTable(
                           headingRowHeight: 76,
                           columns: [
-                            for (var index = 0; index < _columns.length; index++)
+                            for (final index in _tableColumnIndexes)
                               DataColumn(
                                 label: _ColumnFilter(
-                                  label: _columns[index],
+                                  label: _detailColumns[index],
                                   sortAscending: _sortColumnIndex == index
                                       ? _sortAscending
                                       : null,
@@ -202,23 +202,15 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                                   }),
                                 ),
                               ),
-                            const DataColumn(label: Text('Map')),
                           ],
                           rows: [
                             for (final state in pageStates)
                               DataRow(
                                 key: ValueKey('flight-row-${state.icao24}'),
+                                onSelectChanged: (_) => _showFlightDetails(state),
                                 cells: [
-                                  for (final value in _values(state))
-                                    DataCell(Text(value)),
-                                  DataCell(
-                                    IconButton(
-                                      key: ValueKey('show-map-${state.icao24}'),
-                                      tooltip: 'Show flight on map',
-                                      icon: const Icon(Icons.map_outlined),
-                                      onPressed: () => _showFlightMap(state),
-                                    ),
-                                  ),
+                                  for (final index in _tableColumnIndexes)
+                                    DataCell(Text(_values(state)[index])),
                                 ],
                               ),
                           ],
@@ -253,15 +245,16 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
     return (rowCount - 1) ~/ _rowsPerPage;
   }
 
-  Future<void> _showFlightMap(AircraftState state) {
+  Future<void> _showFlightDetails(AircraftState state) {
     final identifier = state.callSign.isEmpty
         ? state.icao24.toUpperCase()
         : state.callSign;
+    final values = _values(state);
     return showDialog<void>(
       context: context,
       builder: (context) => Dialog(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900, maxHeight: 680),
+          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 680),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -270,7 +263,7 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                   children: [
                     Expanded(
                       child: Text(
-                        '$identifier on map',
+                        '$identifier flight details',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
@@ -283,20 +276,25 @@ class _FlightStatesTableState extends State<FlightStatesTable> {
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: state.latitude == null || state.longitude == null
-                      ? const Center(
-                          child: Text('This flight has no reported position.'),
-                        )
-                      : AircraftMapScope(
-                          aircraft: [state],
-                          selectedAircraftIcao24: state.icao24,
-                          onAircraftSelected: (_) {},
-                          onAircraftDeselected: () {},
-                          child: GeographicBoundsMap(
-                            bounds: widget.bounds,
-                            aircraftCount: 1,
+                  child: ListView.separated(
+                    itemCount: _detailColumns.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 170,
+                            child: Text(
+                              _detailColumns[index],
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
                           ),
-                        ),
+                          Expanded(child: Text(values[index])),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
