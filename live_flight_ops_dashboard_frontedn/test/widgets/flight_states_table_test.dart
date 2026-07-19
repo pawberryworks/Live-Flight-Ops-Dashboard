@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:live_flight_ops_dashboard_frontedn/models/aircraft_state.dart';
 import 'package:live_flight_ops_dashboard_frontedn/models/geographic_bounds.dart';
 import 'package:live_flight_ops_dashboard_frontedn/widgets/flight_states_table.dart';
+import 'package:live_flight_ops_dashboard_frontedn/widgets/geographic_bounds_map.dart';
 
 void main() {
   const bounds = GeographicBounds(
@@ -70,6 +71,23 @@ void main() {
     expect(find.text('Time position'), findsOneWidget);
     expect(find.text('Altitude'), findsOneWidget);
     expect(find.text('10000.0 m'), findsOneWidget);
+
+    final detailsMap = tester.widget<GeographicBoundsMap>(
+      find.byKey(const ValueKey('flight-details-map')),
+    );
+    expect(detailsMap.bounds.latitudeMin, closeTo(42.5, 0.000001));
+    expect(detailsMap.bounds.latitudeMax, closeTo(62.5, 0.000001));
+    expect(detailsMap.bounds.longitudeMin, closeTo(3.4, 0.000001));
+    expect(detailsMap.bounds.longitudeMax, closeTo(23.4, 0.000001));
+
+    final scope = tester.widget<AircraftMapScope>(
+      find.ancestor(
+        of: find.byKey(const ValueKey('flight-details-map')),
+        matching: find.byType(AircraftMapScope),
+      ),
+    );
+    expect(scope.aircraft, hasLength(1));
+    expect(scope.aircraft.single.icao24, 'abc123');
   });
 
   testWidgets('only builds the current page of a large flight list', (
