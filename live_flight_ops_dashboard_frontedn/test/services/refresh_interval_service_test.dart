@@ -41,6 +41,53 @@ void main() {
     );
   });
 
+  test('updates the refresh interval through the backend', () async {
+    late http.Request capturedRequest;
+    final service = RefreshIntervalService(
+      client: MockClient((request) async {
+        capturedRequest = request;
+        return http.Response('', 204);
+      }),
+    );
+
+    await service.updateRefreshInterval(const Duration(seconds: 15));
+
+    expect(capturedRequest.method, 'PUT');
+    expect(
+      capturedRequest.url,
+      Uri.parse('https://localhost:7002/api/refreshInterval/15'),
+    );
+    expect(capturedRequest.headers['Accept'], 'application/json');
+  });
+
+  test('does not send an invalid refresh interval', () async {
+    final service = RefreshIntervalService(
+      client: MockClient((_) async => http.Response('', 204)),
+    );
+
+    expect(
+      service.updateRefreshInterval(const Duration(milliseconds: 500)),
+      throwsA(isA<RefreshIntervalException>()),
+    );
+  });
+
+  test('reports an unsuccessful refresh interval update', () async {
+    final service = RefreshIntervalService(
+      client: MockClient((_) async => http.Response('Unavailable', 500)),
+    );
+
+    expect(
+      service.updateRefreshInterval(const Duration(seconds: 15)),
+      throwsA(
+        isA<RefreshIntervalException>().having(
+          (error) => error.message,
+          'message',
+          contains('HTTP 500'),
+        ),
+      ),
+    );
+  });
+
   for (final invalidResponse in ['0', '-1', '"10"', '{}']) {
     test('reports invalid refresh interval $invalidResponse', () async {
       final service = RefreshIntervalService(

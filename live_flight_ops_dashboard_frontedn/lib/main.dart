@@ -13,6 +13,7 @@ import 'theme/app_colors.dart';
 import 'widgets/flight_states_list.dart';
 import 'widgets/flight_states_table.dart';
 import 'widgets/geographic_bounds_map.dart';
+import 'widgets/settings_view.dart';
 
 void main() {
   runApp(const MainApp());
@@ -67,6 +68,7 @@ class _DashboardPageState extends State<DashboardPage> {
   late Future<_DashboardData> _dashboardData;
   Timer? _flightStatesRefreshTimer;
   GeographicBounds? _bounds;
+  Duration? _refreshInterval;
   // Keep newly added state nullable and lazily initialized so hot reload can
   // migrate dashboard State objects that were created before these fields
   // existed.
@@ -105,15 +107,27 @@ class _DashboardPageState extends State<DashboardPage> {
     _bounds = results[0] as GeographicBounds;
     _flightStates.value = results[1] as FlightStates;
     if (mounted) {
-      _flightStatesRefreshTimer = Timer.periodic(
-        refreshInterval,
-        (_) => unawaited(_refreshFlightStates()),
-      );
+      _startFlightStatesRefreshTimer(refreshInterval);
     }
     return _DashboardData(
       bounds: _bounds!,
       flightStates: results[1] as FlightStates,
+      refreshInterval: refreshInterval,
     );
+  }
+
+  void _startFlightStatesRefreshTimer(Duration refreshInterval) {
+    _refreshInterval = refreshInterval;
+    _flightStatesRefreshTimer?.cancel();
+    _flightStatesRefreshTimer = Timer.periodic(
+      refreshInterval,
+      (_) => unawaited(_refreshFlightStates()),
+    );
+  }
+
+  void _updateRefreshInterval(Duration refreshInterval) {
+    if (!mounted) return;
+    setState(() => _startFlightStatesRefreshTimer(refreshInterval));
   }
 
   Future<void> _refreshFlightStates() async {
@@ -206,6 +220,12 @@ class _DashboardPageState extends State<DashboardPage> {
                       title: 'List',
                       onTap: () => setState(() => _selectedPage = 1),
                       icon: const Icon(Icons.list),
+                    ),
+                    SideMenuItemDataTile(
+                      isSelected: _currentPage == 2,
+                      title: 'Settings',
+                      onTap: () => setState(() => _selectedPage = 2),
+                      icon: const Icon(Icons.settings),
                     ),
                   ],
                   footer: IconButton(
@@ -310,6 +330,12 @@ class _DashboardPageState extends State<DashboardPage> {
                               );
                             },
                           ),
+                        SettingsView(
+                          refreshInterval:
+                              _refreshInterval ?? data.refreshInterval,
+                          refreshIntervalService: _refreshIntervalService,
+                          onRefreshIntervalUpdated: _updateRefreshInterval,
+                        ),
                       ],
                     ),
                   );
@@ -408,8 +434,13 @@ class _DashboardPageState extends State<DashboardPage> {
 }
 
 class _DashboardData {
-  const _DashboardData({required this.bounds, required this.flightStates});
+  const _DashboardData({
+    required this.bounds,
+    required this.flightStates,
+    required this.refreshInterval,
+  });
 
   final GeographicBounds bounds;
   final FlightStates flightStates;
+  final Duration refreshInterval;
 }
