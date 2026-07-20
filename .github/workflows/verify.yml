@@ -1,0 +1,32 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test live-flught-ops-dashboard-backend/LiveFlightOpsDashboardBackend.slnx --configuration Release
+
+  frontend:
+    name: Flutter analysis and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - working-directory: live_flight_ops_dashboard_frontedn
+        run: flutter pub get
+      - working-directory: live_flight_ops_dashboard_frontedn
+        run: flutter analyze
+      - working-directory: live_flight_ops_dashboard_frontedn
+        run: flutter test

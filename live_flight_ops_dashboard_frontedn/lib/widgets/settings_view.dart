@@ -15,6 +15,7 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
+  static const _minimumRefreshIntervalInSeconds = 5;
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _refreshIntervalController;
   bool _isSaving = false;
@@ -96,8 +97,10 @@ class _SettingsViewState extends State<SettingsView> {
                     ),
                     validator: (value) {
                       final seconds = int.tryParse(value?.trim() ?? '');
-                      if (seconds == null || seconds <= 0) {
-                        return 'Enter a positive whole number of seconds.';
+                      if (seconds == null ||
+                          seconds < _minimumRefreshIntervalInSeconds) {
+                        return 'Enter a whole number of at least '
+                            '$_minimumRefreshIntervalInSeconds seconds.';
                       }
                       return null;
                     },

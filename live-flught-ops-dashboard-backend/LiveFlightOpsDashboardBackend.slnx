@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="LiveFlightOpsDashboardBackend.csproj" />
+  <Project Path="../live-flught-ops-dashboard-backend.Tests/LiveFlightOpsDashboardBackend.Tests.csproj" />
 </Solution>

@@ -8,6 +8,7 @@ namespace LiveFlightOpsDashboardBackend.Services;
 public sealed class FlightStatesBackgroundService : BackgroundService
 {
     public const string FlightStatesCacheKey = "FlightStates";
+    public const string FlightStatesFetchedAtCacheKey = "FlightStatesFetchedAt";
 
     private const string HttpClientName = "OpenSky";
     private const string FlightStatesPath = "states/all";
@@ -60,7 +61,9 @@ public sealed class FlightStatesBackgroundService : BackgroundService
             _logger.LogInformation("Fetched flight states from the external API with count {Count}.",
                 flightStates.States?.Count ?? 0);
 
+            var fetchedAt = DateTimeOffset.UtcNow;
             _memoryCache.Set(FlightStatesCacheKey, flightStates);
+            _memoryCache.Set(FlightStatesFetchedAtCacheKey, fetchedAt);
 
             _logger.LogInformation(
                 "Received {FlightStateCount} flight states at API timestamp {ApiTimestamp}.",
