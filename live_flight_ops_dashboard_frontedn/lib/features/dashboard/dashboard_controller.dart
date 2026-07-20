@@ -7,15 +7,24 @@ import '../../models/geographic_bounds.dart';
 import '../../repositories/dashboard_repositories.dart';
 
 class DashboardController extends ChangeNotifier {
-  DashboardController({
+  factory DashboardController({
     required FlightStatesRepository flightStatesRepository,
     required GeographicBoundsRepository geographicBoundsRepository,
     required RefreshIntervalRepository refreshIntervalRepository,
     Iterable<Disposable> resources = const [],
-  }) : _flightStatesRepository = flightStatesRepository,
-       _geographicBoundsRepository = geographicBoundsRepository,
-       _refreshIntervalRepository = refreshIntervalRepository,
-       _resources = List.unmodifiable(resources);
+  }) => DashboardController._(
+    flightStatesRepository,
+    geographicBoundsRepository,
+    refreshIntervalRepository,
+    resources,
+  );
+
+  DashboardController._(
+    this._flightStatesRepository,
+    this._geographicBoundsRepository,
+    this._refreshIntervalRepository,
+    Iterable<Disposable> resources,
+  ) : _resources = List.unmodifiable(resources);
 
   final FlightStatesRepository _flightStatesRepository;
   final GeographicBoundsRepository _geographicBoundsRepository;

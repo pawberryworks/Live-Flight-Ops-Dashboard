@@ -6,17 +6,23 @@ import 'package:http/http.dart' as http;
 import '../core/api_configuration.dart';
 
 class RefreshIntervalService {
-  RefreshIntervalService({
+  factory RefreshIntervalService({
     http.Client? client,
     ApiConfiguration? configuration,
     Duration requestTimeout = const Duration(seconds: 15),
-  })
-    : _client = client ?? http.Client(),
-      _refreshIntervalUri =
-          (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
-            '/api/refreshInterval',
-          ),
-      _requestTimeout = requestTimeout;
+  }) => RefreshIntervalService._(
+    client ?? http.Client(),
+    (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
+      '/api/refreshInterval',
+    ),
+    requestTimeout,
+  );
+
+  RefreshIntervalService._(
+    this._client,
+    this._refreshIntervalUri,
+    this._requestTimeout,
+  );
 
   final http.Client _client;
   final Uri _refreshIntervalUri;

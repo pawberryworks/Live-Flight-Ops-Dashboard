@@ -7,15 +7,23 @@ import '../core/api_configuration.dart';
 import '../models/flight_states.dart';
 
 class FlightStatesService {
-  FlightStatesService({
+  factory FlightStatesService({
     http.Client? client,
     ApiConfiguration? configuration,
     Duration requestTimeout = const Duration(seconds: 15),
-  })
-    : _client = client ?? http.Client(),
-      _flightStatesUri = (configuration ?? ApiConfiguration.fromEnvironment())
-          .endpoint('/api/flightStates'),
-      _requestTimeout = requestTimeout;
+  }) => FlightStatesService._(
+    client ?? http.Client(),
+    (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
+      '/api/flightStates',
+    ),
+    requestTimeout,
+  );
+
+  FlightStatesService._(
+    this._client,
+    this._flightStatesUri,
+    this._requestTimeout,
+  );
 
   final http.Client _client;
   final Uri _flightStatesUri;

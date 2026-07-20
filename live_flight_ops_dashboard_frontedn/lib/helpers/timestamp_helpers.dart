@@ -1,4 +1,4 @@
-String timestamp_to_string(int? secondsSinceEpoch) {
+String timestampToString(int? secondsSinceEpoch) {
   if (secondsSinceEpoch == null) return '—';
 
   final localTime = DateTime.fromMillisecondsSinceEpoch(
