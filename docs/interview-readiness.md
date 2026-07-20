@@ -136,6 +136,31 @@ controller gives one owner to initial loading, periodic refresh, selection,
 error events, and disposal. Repository contracts make that behavior testable
 with fakes and keep services at the infrastructure edge.
 
+**Important wording:** The controller **coordinates** HTTP-backed work; it
+does not implement HTTP itself. It asks repository interfaces for flight
+states, bounds, and refresh settings. The HTTP repositories delegate transport,
+timeouts, status handling, JSON decoding, and client cleanup to focused
+services. This distinction prevents the controller from becoming a transport
+layer while still putting the multi-request user workflow in one testable
+place.
+
+**Why this is better than HTTP calls in widgets:**
+
+| Concern | Widget-owned HTTP | Controller-coordinated HTTP |
+| --- | --- | --- |
+| Rendering | Build methods must also account for request timing and transient failures. | Widgets receive loading, ready, or failure state and render it. |
+| Cross-view consistency | Each map/list/table interaction can accidentally create its own request and state. | One controller owns the selected aircraft and the shared dashboard snapshot. |
+| Lifecycle safety | Timers and late responses can outlive a widget or update the wrong screen. | The controller cancels its timer, invalidates older loads, and ignores work after disposal. |
+| Testing | Widget tests need to simulate transport details to test workflow rules. | Controller tests use repository fakes to test workflow rules without HTTP. |
+| Change isolation | A changed endpoint or JSON rule can force presentation changes. | Services absorb transport changes as long as repository contracts stay stable. |
+
+**Trade-off:** This is not automatically better for every screen. A tiny,
+one-shot widget with no shared state may be simpler with a local future. The
+dashboard has coordinated views, recurring refresh, retry/failure behavior,
+and lifecycle rules, so a controller is justified. If the controller grows
+well beyond this feature, split it by use case or introduce a more explicit
+state-management solution rather than letting it become a “god object.”
+
 **Question: How do you avoid stale responses overwriting newer state?**
 
 **Answer:** Initial loads use an incrementing generation. A result is ignored
