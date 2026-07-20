@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../helpers/timestamp_helpers.dart';
-
 class DashboardSidebar extends StatelessWidget {
   const DashboardSidebar({
     required this.selectedPage,
     required this.onPageSelected,
     required this.onToggleTheme,
     this.flightStatesTime,
+    super.key,
   });
 
   final int selectedPage;
@@ -144,7 +143,7 @@ class _FlightDataTimestamp extends StatelessWidget {
     final localizations = MaterialLocalizations.of(context);
     final timestampLabel = time == null
         ? 'Awaiting flight data'
-        : timestamp_to_string(time!);
+        : _localizedTimestamp(localizations, time!);
 
     return Semantics(
       label: 'Flight data timestamp: $timestampLabel',
@@ -185,6 +184,12 @@ class _FlightDataTimestamp extends StatelessWidget {
       ),
     );
   }
+}
+
+String _localizedTimestamp(MaterialLocalizations localizations, int timestamp) {
+  final localTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000).toLocal();
+  return '${localizations.formatMediumDate(localTime)} at '
+      '${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(localTime))}';
 }
 
 class _BrandHeader extends StatelessWidget {

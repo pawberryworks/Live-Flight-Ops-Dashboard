@@ -12,7 +12,8 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddMemoryCache();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<FlightStatesHealthCheck>("flight-states", tags: ["ready"]);
 builder.Services
     .AddOptions<OpenSkyOptions>()
     .Bind(builder.Configuration.GetSection(OpenSkyOptions.SectionName))
@@ -61,6 +62,13 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 app.Run();

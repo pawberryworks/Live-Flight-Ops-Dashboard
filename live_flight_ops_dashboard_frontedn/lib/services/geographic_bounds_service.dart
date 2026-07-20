@@ -7,17 +7,23 @@ import '../core/api_configuration.dart';
 import '../models/geographic_bounds.dart';
 
 class GeographicBoundsService {
-  GeographicBoundsService({
+  factory GeographicBoundsService({
     http.Client? client,
     ApiConfiguration? configuration,
     Duration requestTimeout = const Duration(seconds: 15),
-  })
-    : _client = client ?? http.Client(),
-      _geographicBoundsUri =
-          (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
-            '/api/geographicBounds',
-          ),
-      _requestTimeout = requestTimeout;
+  }) => GeographicBoundsService._(
+    client ?? http.Client(),
+    (configuration ?? ApiConfiguration.fromEnvironment()).endpoint(
+      '/api/geographicBounds',
+    ),
+    requestTimeout,
+  );
+
+  GeographicBoundsService._(
+    this._client,
+    this._geographicBoundsUri,
+    this._requestTimeout,
+  );
 
   final http.Client _client;
   final Uri _geographicBoundsUri;

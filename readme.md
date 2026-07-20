@@ -12,6 +12,26 @@ applications:
 > The existing directory names are retained for compatibility, including their
 > original spelling.
 
+## Run locally
+
+Prerequisites: .NET 10 SDK and a current stable Flutter SDK. Start the backend
+first; it listens on `https://localhost:7002` in its HTTPS development profile.
+
+```bash
+dotnet run --project live-flught-ops-dashboard-backend
+```
+
+Then start the frontend in a second terminal:
+
+```bash
+cd live_flight_ops_dashboard_frontedn
+flutter pub get
+flutter run -d chrome
+```
+
+The default frontend API URL is `https://localhost:7002`. Override it with
+`--dart-define=API_BASE_URL=https://api.example.com` for a different environment.
+
 ## Architecture
 
 The frontend follows a lightweight layered architecture. Dependencies point
@@ -235,7 +255,8 @@ application authentication scheme.
 ### Operational behavior
 
 - `GET /health` is a liveness endpoint registered through ASP.NET Core health
-  checks.
+  checks. `GET /health/ready` additionally verifies that a flight-state
+  snapshot has been obtained recently (within two refresh intervals).
 - The OpenSky client uses a 15-second timeout. The worker logs request,
   timeout, and payload failures while retaining the last successful snapshot.
 - The current bounds are sent to OpenSky as `lamin`, `lomin`, `lamax`, and
@@ -254,6 +275,8 @@ application authentication scheme.
   disposal during in-flight work.
 - **Widget tests** cover map interaction plus tracked-flight search, selection,
   flight-details access, and table behavior.
+- **Backend unit tests** cover runtime setting validation, startup option
+  validation, and the OpenSky aircraft-state JSON converter.
 
 Run frontend checks from the Flutter project directory when Flutter is
 available:
@@ -263,3 +286,22 @@ cd live_flight_ops_dashboard_frontedn
 flutter test
 flutter analyze
 ```
+
+Run backend tests from the repository root:
+
+```bash
+dotnet test live-flught-ops-dashboard-backend/LiveFlightOpsDashboardBackend.slnx
+```
+
+GitHub Actions runs both the backend test suite and Flutter analysis/tests for
+pull requests and pushes to `main`.
+
+## Production considerations
+
+This repository is deliberately a demo deployment, not a secured production
+control plane. Before production use, add authenticated, role-based access to
+the settings endpoints; configure a specific production CORS allow-list (or
+serve the web app and API from the same origin); persist runtime settings; and
+replace the in-memory snapshot with a shared cache or dedicated ingestion
+service. Monitor `/health/ready`, snapshot age, provider errors, and poll
+duration so operators can distinguish live data from retained stale data.
