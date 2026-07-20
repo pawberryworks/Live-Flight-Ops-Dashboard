@@ -271,6 +271,240 @@ answer, give one repository-specific example, and end with a trade-off.
 30. How would you evaluate and improve the dashboard’s performance with a much
     larger aircraft collection?
 
+### Model answers for the question bank
+
+These are concise answers to rehearse. Expand with the relevant code walkthrough
+when the interviewer asks a follow-up; do not deliver all of the detail unless
+it is useful.
+
+#### Architecture and trade-offs
+
+**1. Draw the architecture and identify the dependency direction.**
+
+The Flutter presentation layer depends on `DashboardController`, which depends
+on repository contracts. HTTP repository implementations depend on focused
+services and API configuration. On the server, controllers depend on services,
+while a hosted worker owns provider polling and publishes the cached snapshot.
+The dependency direction keeps UI/application code independent of transport
+details, so implementations can be changed or faked at the edge.
+
+**2. Why choose this approach rather than Provider, Bloc, Riverpod, Redux, or
+a state-machine library?**
+
+The feature has one coherent dashboard workflow and can be expressed clearly
+with `ChangeNotifier`, immutable state values, and repository contracts. That
+keeps the dependency footprint small and the asynchronous rules visible. For a
+larger app with many independently composed feature states, I would evaluate a
+more structured state-management tool; the principle of separating UI from
+workflow and transport would remain.
+
+**3. Which decisions were product-driven versus demo-scoped?**
+
+Backend polling, one shared snapshot, coordinated aircraft selection, and
+retaining data during a transient failure are product-driven operational
+decisions. Process-local settings, an in-memory cache, development-only CORS,
+and unauthenticated settings endpoints are demo-scope choices that would not
+be sufficient in production.
+
+**4. What breaks with 1,000 clients?**
+
+The provider is protected because the backend still polls once, not once per
+client. The single process may instead become constrained by API throughput,
+memory, connection handling, and rendering on clients. I would load-test the
+API and UI, add horizontal replicas behind a load balancer, and replace
+process-local state with shared storage and coordinated ingestion.
+
+**5. How would you split ingestion from the read API?**
+
+Make ingestion a separately deployed worker that polls the provider and writes
+validated snapshots plus metadata to shared storage. The read API would only
+serve that store and expose freshness. This allows each part to scale and fail
+independently; worker coordination prevents duplicate provider polling.
+
+**6. How would you version the API?**
+
+Start with additive, backward-compatible fields and tolerant client parsing.
+For a breaking contract, introduce an explicit versioned route or negotiated
+media type, support both versions during migration, contract-test them, and
+remove the old version only after consumers move.
+
+**7. Why is the in-memory cache acceptable here, and when is it not?**
+
+It is appropriate for a small single-instance demo because it is simple and
+fast. It is not sufficient when snapshots must survive restarts, be consistent
+between replicas, or be audited; then I would use a shared cache or data store.
+
+**8. What are the consequences of last-known-good data?**
+
+It preserves operational context during a short outage but risks users acting
+on stale information. The mitigation is an explicit freshness indicator,
+readiness degradation, clear operator messaging, and a defined point at which
+stale data is no longer served or is prominently marked.
+
+#### Concurrency and failure handling
+
+**9. Explain the load generation and the race it prevents.**
+
+Each initial load receives a monotonically increasing generation number. When
+the request completes, the controller applies the result only if its generation
+is still current. A slower old request therefore cannot overwrite the result of
+a newer retry, and disposal invalidates outstanding generations as well.
+
+**10. What happens if the user retries during the initial load?**
+
+The retry starts a new generation and cancels the refresh timer. The original
+request may still complete, but its result is ignored because its generation
+does not match. The newer request is the only one permitted to publish state.
+
+**11. What happens on disposal during a request?**
+
+The controller marks itself disposed, increments the generation, cancels its
+timer, disposes owned resources, and prevents later state notifications. The
+network operation may complete, but it cannot update a dead UI owner.
+
+**12. Why prevent overlapping periodic refreshes?**
+
+Without the guard, a slow request could cause timer ticks to pile up, consume
+connections, return out of order, and make the provider load worse. The
+controller permits only one refresh at a time; when it completes, the next
+timer tick can try again.
+
+**13. How would you test timeouts, bad JSON, `503`, and an outage?**
+
+Use fake or mock HTTP clients to return a delayed future, malformed payload,
+and status response deterministically. Assert services normalize failures,
+then use repository fakes to prove the controller retains ready data and emits
+an error event. At API level, use an in-memory host and controlled cache to
+verify the first-snapshot `503` and readiness results.
+
+**14. How would you choose a retry policy?**
+
+Classify errors first: do not retry validation failures, but retry selected
+timeouts and transient HTTP failures. Use capped exponential backoff with
+jitter, respect provider rate limits and `Retry-After`, expose attempt metrics,
+and stop promptly on application shutdown.
+
+**15. How would you show stale data to an operator?**
+
+Return the backend fetch time or computed age with the snapshot, compare it to
+an agreed freshness threshold, and display an unmissable warning/badge with
+the age and last successful update time. It should not rely only on a provider
+timestamp because that does not prove when this backend successfully fetched
+the response.
+
+**16. Which errors are user-facing versus logged?**
+
+Users receive a clear, actionable message such as “Flight data could not be
+refreshed; showing the last update,” without internal URLs, stack traces, or
+credentials. Logs and telemetry hold structured diagnostic details, status
+codes, timings, and safe correlation identifiers; secrets and sensitive
+payloads must be redacted.
+
+#### Security and operations
+
+**17. What is insecure about settings endpoints today?**
+
+They change shared operational behavior and the demo does not have application
+authentication or role-based authorization. An unauthorized caller could
+change bounds or increase polling frequency. Production needs identity, roles,
+auditing, validation/rate limits, and an intentional network exposure model.
+
+**18. How would you authorize settings changes versus viewing flights?**
+
+Define separate policies, for example a read-only operator/viewer role for
+flight data and an operations-admin role for bounds and refresh settings. Use
+server-enforced claims, record who changed what and when, and consider approval
+or change-control requirements for high-impact settings.
+
+**19. What does development CORS do, and what changes in production?**
+
+The development policy allows absolute `localhost` origins so a local Flutter
+web app can call the local API. It is not a production access-control system.
+Production should use a specific allow-list of owned origins, HTTPS, identity,
+and ideally same-origin hosting where practical.
+
+**20. Which operational signals would you add first?**
+
+Track provider poll duration, success/failure count by reason, snapshot age,
+response size, API latency/error rate, and configuration changes. Alert on no
+snapshot, sustained stale data, elevated provider failures, and abnormal poll
+latency; keep health endpoints for orchestration rather than using them as the
+only observability mechanism.
+
+**21. How would you handle provider credentials or rate limits?**
+
+Store credentials in a secret manager and inject them through configuration,
+never in source or logs. Use a named client/auth handler, enforce the minimum
+interval, observe provider quotas, respect rate-limit headers, and use the
+retry/backoff policy to avoid turning errors into abusive traffic.
+
+**22. How would you deploy multiple replicas?**
+
+Put stateless read API replicas behind a load balancer, move snapshots and
+configuration to shared durable infrastructure, and make only one worker poll
+at a time through leader election, a distributed lock, or a separate ingestion
+deployment. Test worker failover so ingestion resumes without duplicate bursts.
+
+**23. What privacy/retention questions would you ask?**
+
+Identify the data licence, allowed uses, whether aircraft/operator data is
+personal or commercially sensitive in the relevant jurisdiction, retention
+period, access logs, audit needs, and whether location history can be exported.
+Collect only what the operator needs and document deletion/retention controls.
+
+#### Testing and quality
+
+**24. What is covered and what is missing?**
+
+The repository has Flutter model, service, controller, and widget tests, plus
+backend tests for settings validation, option validation, health checks, and
+JSON conversion. The important missing layer is end-to-end API integration
+coverage for routing, serialization, status behavior, and hosted-worker
+interaction under controlled dependencies.
+
+**25. What does an API integration test prove that a unit test cannot?**
+
+It exercises the real application composition: dependency injection, routing,
+model binding, response serialization, middleware, and HTTP status codes.
+For example, it can prove an empty cache produces the documented `503` through
+the actual route, not just that a service returns `null` in isolation.
+
+**26. How would you test the hosted worker without the real provider?**
+
+Inject a fake named HTTP message handler/client that returns controlled
+responses and use a short, test-controlled interval or an extracted polling
+operation. Assert the cache changes only after a valid response and remains
+unchanged after failures. Avoid real time by injecting a clock or delay
+abstraction if the loop itself is tested.
+
+**27. How would you make time-based tests deterministic?**
+
+Avoid wall-clock sleeps. Inject a clock for timestamps and a scheduler/timer or
+delay abstraction for polling; then advance fake time in the test. This makes
+freshness thresholds, retries, and periodic behavior fast and repeatable.
+
+**28. What quality gates exist and what would you add?**
+
+GitHub Actions runs backend tests and Flutter dependency installation,
+analysis, and tests. I would add formatting checks, dependency/security
+scanning, API integration tests, coverage trend reporting, and perhaps a
+smoke test against a deployed non-production environment.
+
+**29. How would you test accessibility?**
+
+Start with semantic labels, keyboard navigation, focus order, contrast, text
+scaling, and screen-reader announcements for selection and errors. Add widget
+tests for semantics/focus where possible, then perform manual testing with
+screen-reader and keyboard-only workflows on supported browsers.
+
+**30. How would you handle much larger aircraft collections?**
+
+Measure first: profile API payload size, JSON decode time, controller updates,
+map marker painting, list/table build cost, memory, and frame time. Then use
+server-side filtering/pagination or viewport queries, client-side lazy lists
+and marker clustering/virtualization, response compression, and incremental
+updates only if profiling proves they are needed.
+
 ## 6. Honest gap analysis and prioritized roadmap
 
 Use this section when asked, “What would you do next?” A strong answer is
